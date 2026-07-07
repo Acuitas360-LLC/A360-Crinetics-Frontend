@@ -128,23 +128,23 @@ def parse_conversation(messages):
     return blocks
 
 def generate_slide_content(block):
-        """
-        Uses LLM to convert block into slide-ready content.
+    """
+    Uses LLM to convert block into slide-ready content.
 
-        Input:
-            block = {
-                "question": "...",
-                "summary": "...",
-                "data": {...}
-            }
+    Input:
+        block = {
+            "question": "...",
+            "summary": "...",
+            "data": {...}
+        }
 
-        Output:
-            {
-                "title": "...",
-                "bullets": ["...", "..."],
-                "kpis": ["...", "..."]
-            }
-        """
+    Output:
+        {
+            "title": "...",
+            "bullets": ["...", "..."],
+            "kpis": ["...", "..."]
+        }
+    """
 
     question = block.get("question", "")
     summary = block.get("summary", "")
@@ -152,192 +152,192 @@ def generate_slide_content(block):
 
     prompt = f"""
 
-    You are a commercial operations consultant preparing a single PPT slide 
-    for senior leadership at a life sciences firm.
-    
-    Your goal is to highlight growth, demand signals, risks, opportunities, 
-    and strategic implications — NOT just describe data.
-    
-    You MUST adapt the output based on BOTH the DATA DOMAIN and the 
-    ANALYTICAL PATTERN. These are independent and must be classified separately.
-    
-    ------------------------------------------------------------
-    INPUT:
-    Question: {question}
-    Summary: {summary}
-    Data Sample: {data_sample}
-    ------------------------------------------------------------
-    
-    ### STEP 1: CLASSIFY DATA DOMAIN (mandatory first step)
-    
-    Read the question, summary, and data sample. Identify which domain the 
-    underlying metrics belong to. Use the lexicon below to decide.
-    
-    DOMAIN A — SALES_PERFORMANCE
-    Signals: sales trends, sales performance, breadth, depth, adding new businesses, account adoption, own-brand performance
-    Vocabulary allowed: sales, growth, demand, volume, units, new accounts, new business
-    
-    DOMAIN B — COMPETITOR_DYNAMICS  
-    Signals:  market share, competitor, gaining/lossing share, competitor share, 
-    Vocabulary allowed: share, share-shift, competitive position,  capture rate
-    
-    DOMAIN C — FIELD_EXECUTION
-    Signals: calls, call activity, touch, touch activity, reach, frequency, rep visits, coverage of HCPs/accounts by reps
-    Vocabulary allowed: calls, reach, frequency, coverage, call plan, touches, effort percentage
-    
-    DOMAIN D — CROSS_DOMAIN
-        Signals: capture rate, sales growth comparison  across our product and competitor products or among competitors, 
-    Use ONLY when the question explicitly correlates two domains, 
-    e.g., "did increased calls drive sales lift?" or "How does our product sales grow in recent 3 months and how does that compare with competitor sales?"
-    
-    CRITICAL RULE: 
-    If the question is FIELD_EXECUTION, you MUST NOT use sales/revenue/share 
-    vocabulary in title, bullets, KPIs, or insight.
-    If the question is SALES_PERFORMANCE, you MUST NOT use call/reach/
-    frequency vocabulary unless the data sample contains it.
-    If the question is COMPETITOR_DYNAMICS, you MUST NOT report own-brand 
-    sales as the headline metric.
-    For cross-domain questions, the context will inherently span multiple domains such as FIELD_EXECUTION, SALES_PERFORMANCE, and/or COMPETITOR_DYNAMICS. In such scenarios, it is acceptable to use vocabulary from multiple relevant domains together, while ensuring the terminology used in titles, bullets, KPIs, and insights remains contextually appropriate and aligned with the dominant signal in the data.
-    If the data sample contradicts the question's apparent domain, trust 
-    the data sample and flag the mismatch in the insight.
-    
-    ### STEP 2: CLASSIFY ANALYTICAL PATTERN
-    
-    [Your existing 10 categories — TREND, SHORT_TERM, REGIONAL, DISTRIBUTION, 
-    ACCOUNT_HEALTH, NEW_BUSINESS, ADOPTION, TIER, MARKET_SHARE, TOP_N]
-    
-    Note: MARKET_SHARE pattern is only valid with COMPETITOR_DYNAMICS domain.
-    
-    ### STEP 3: SELECT KPIs
-    
-    Select KPIs only from the "Findings" section of the provided summary and strictly anchor 
-    all KPI generation to that content. Generate a maximum of 3 KPIs only.
+You are a commercial operations consultant preparing a single PPT slide 
+for senior leadership at a life sciences firm.
+ 
+Your goal is to highlight growth, demand signals, risks, opportunities, 
+and strategic implications — NOT just describe data.
+ 
+You MUST adapt the output based on BOTH the DATA DOMAIN and the 
+ANALYTICAL PATTERN. These are independent and must be classified separately.
+ 
+------------------------------------------------------------
+INPUT:
+Question: {question}
+Summary: {summary}
+Data Sample: {data_sample}
+------------------------------------------------------------
+ 
+### STEP 1: CLASSIFY DATA DOMAIN (mandatory first step)
+ 
+Read the question, summary, and data sample. Identify which domain the 
+underlying metrics belong to. Use the lexicon below to decide.
+ 
+DOMAIN A — SALES_PERFORMANCE
+  Signals: sales trends, sales performance, breadth, depth, adding new businesses, account adoption, own-brand performance
+  Vocabulary allowed: sales, growth, demand, volume, units, new accounts, new business
+ 
+DOMAIN B — COMPETITOR_DYNAMICS  
+  Signals:  market share, competitor, gaining/lossing share, competitor share, 
+  Vocabulary allowed: share, share-shift, competitive position,  capture rate
+ 
+DOMAIN C — FIELD_EXECUTION
+  Signals: calls, call activity, touch, touch activity, reach, frequency, rep visits, coverage of HCPs/accounts by reps
+  Vocabulary allowed: calls, reach, frequency, coverage, call plan, touches, effort percentage
+ 
+DOMAIN D — CROSS_DOMAIN
+    Signals: capture rate, sales growth comparison  across our product and competitor products or among competitors, 
+  Use ONLY when the question explicitly correlates two domains, 
+  e.g., "did increased calls drive sales lift?" or "How does our product sales grow in recent 3 months and how does that compare with competitor sales?"
+ 
+CRITICAL RULE: 
+If the question is FIELD_EXECUTION, you MUST NOT use sales/revenue/share 
+vocabulary in title, bullets, KPIs, or insight.
+If the question is SALES_PERFORMANCE, you MUST NOT use call/reach/
+frequency vocabulary unless the data sample contains it.
+If the question is COMPETITOR_DYNAMICS, you MUST NOT report own-brand 
+sales as the headline metric.
+For cross-domain questions, the context will inherently span multiple domains such as FIELD_EXECUTION, SALES_PERFORMANCE, and/or COMPETITOR_DYNAMICS. In such scenarios, it is acceptable to use vocabulary from multiple relevant domains together, while ensuring the terminology used in titles, bullets, KPIs, and insights remains contextually appropriate and aligned with the dominant signal in the data.
+If the data sample contradicts the question's apparent domain, trust 
+the data sample and flag the mismatch in the insight.
+ 
+### STEP 2: CLASSIFY ANALYTICAL PATTERN
+ 
+[Your existing 10 categories — TREND, SHORT_TERM, REGIONAL, DISTRIBUTION, 
+ACCOUNT_HEALTH, NEW_BUSINESS, ADOPTION, TIER, MARKET_SHARE, TOP_N]
+ 
+Note: MARKET_SHARE pattern is only valid with COMPETITOR_DYNAMICS domain.
+ 
+### STEP 3: SELECT KPIs
+ 
+Select KPIs only from the "Findings" section of the provided summary and strictly anchor 
+all KPI generation to that content. Generate a maximum of 3 KPIs only.
 
-    ── KPI ORDERING & STRUCTURE ───────────────────────────────────────────────────
+── KPI ORDERING & STRUCTURE ───────────────────────────────────────────────────
 
-    - The FIRST KPI must always represent National Sales and Growth combined, and 
-    must follow this exact format:
-    "National [Product] [Period] Sales: [prior sales] → [current sales] ([growth%])"
-    
-        ✅ VALID:   "National Relmora R4W Sales: 2.4M → 2.1M (-30%)"
-        ✅ VALID:   "National Account Metric: 135 → 129 (-4%)"
-        ❌ INVALID: Showing growth % alone without sales values in the first KPI.
-        ❌ INVALID: Using a geography or tier metric as the first KPI even if it 
-                    shows a larger movement than the national metric.
+- The FIRST KPI must always represent National Sales and Growth combined, and 
+  must follow this exact format:
+  "National [Product] [Period] Sales: [prior sales] → [current sales] ([growth%])"
+  
+    ✅ VALID:   "National Relmora R4W Sales: 2.4M → 2.1M (-30%)"
+    ✅ VALID:   "National Account Metric: 135 → 129 (-4%)"
+    ❌ INVALID: Showing growth % alone without sales values in the first KPI.
+    ❌ INVALID: Using a geography or tier metric as the first KPI even if it 
+                shows a larger movement than the national metric.
 
-    - The first KPI MUST combine both:
-        • Absolute sales values (prior → current)
-        • Growth percentage in brackets alongside
-    These two MUST always appear together in the first KPI — never separately.
+- The first KPI MUST combine both:
+    • Absolute sales values (prior → current)
+    • Growth percentage in brackets alongside
+  These two MUST always appear together in the first KPI — never separately.
 
-    - If both National Sales and National Growth are unavailable, apply the 
-    following fallback priority order for the first KPI:
-        1. National Sales alone (if only sales is available):
-            ✅ "National Relmora R4W Sales: 2.4M → 2.1M"
-        2. National Growth alone (if only growth % is available):
-            ✅ "National Relmora R4W Growth: -30%"
-        3. If neither National Sales nor National Growth is present in the 
-        findings — only then may the first KPI slot be filled with the 
-        most significant geography-level metric available.
-        ❌ NEVER leave the first KPI slot empty if any national metric exists.
+- If both National Sales and National Growth are unavailable, apply the 
+  following fallback priority order for the first KPI:
+    1. National Sales alone (if only sales is available):
+         ✅ "National Relmora R4W Sales: 2.4M → 2.1M"
+    2. National Growth alone (if only growth % is available):
+         ✅ "National Relmora R4W Growth: -30%"
+    3. If neither National Sales nor National Growth is present in the 
+       findings — only then may the first KPI slot be filled with the 
+       most significant geography-level metric available.
+    ❌ NEVER leave the first KPI slot empty if any national metric exists.
 
-    - The SECOND and THIRD KPIs must represent the most significant 
-    geography-level or tier-level trends/metrics from the findings, in 
-    descending order of significance.
+- The SECOND and THIRD KPIs must represent the most significant 
+  geography-level or tier-level trends/metrics from the findings, in 
+  descending order of significance.
 
-    ── KPI VALUE RULES ────────────────────────────────────────────────────────────
+── KPI VALUE RULES ────────────────────────────────────────────────────────────
 
-    - Each KPI must contain a clearly defined label and the exact corresponding 
-    value directly supported by the findings.
-    - Preserve all numeric comparisons exactly as stated, including current vs 
-    prior values, growth changes, and absolute sales/volume figures.
-    - Do not infer, introduce, summarize, or calculate KPIs beyond what is 
-    explicitly stated in the findings.
-    - If National Sales or growth data is not present in the findings, the first 
-    KPI slot must remain empty — do NOT substitute a geography metric in its place.
+- Each KPI must contain a clearly defined label and the exact corresponding 
+  value directly supported by the findings.
+- Preserve all numeric comparisons exactly as stated, including current vs 
+  prior values, growth changes, and absolute sales/volume figures.
+- Do not infer, introduce, summarize, or calculate KPIs beyond what is 
+  explicitly stated in the findings.
+- If National Sales or growth data is not present in the findings, the first 
+  KPI slot must remain empty — do NOT substitute a geography metric in its place.
 
-    ── REFERENCE EXAMPLES ─────────────────────────────────────────────────────────
+── REFERENCE EXAMPLES ─────────────────────────────────────────────────────────
 
-        National Relmora R4W Sales:   2.4M → 2.1M (-30%)
-        National Account Growth:      18% → 16%
-        National R3M Sales:           2.4M units
-        Regions Above Benchmark:      West, Central, Great Lakes
-        Regions Below Benchmark:      South East
+    National Relmora R4W Sales:   2.4M → 2.1M (-30%)
+    National Account Growth:      18% → 16%
+    National R3M Sales:           2.4M units
+    Regions Above Benchmark:      West, Central, Great Lakes
+    Regions Below Benchmark:      South East
 
-    ### STEP 4: INSIGHT GENERATION LOGIC
-    INSIGHT_GENERATION → Form insights strictly from the "Opportunity / Implication" section of the provided summary, with primary emphasis on highlighting the opportunity areas and business implications. Ensure all insights are directly anchored to the provided content without introducing unsupported assumptions or conclusions.
-    
+### STEP 4: INSIGHT GENERATION LOGIC
+INSIGHT_GENERATION → Form insights strictly from the "Opportunity / Implication" section of the provided summary, with primary emphasis on highlighting the opportunity areas and business implications. Ensure all insights are directly anchored to the provided content without introducing unsupported assumptions or conclusions.
+ 
 
-    ### STEP 5: BULLET GENERATION LOGIC
-    BULLET_GENERATION → Form bullets strictly from the "Key Takeaways" section of the provided summary. Ensure every bullet is directly derived from the provided key takeaways without introducing any new interpretation, assumption, metric, or conclusion. Preserve the original meaning, comparisons, entity standings, and notable gaps or contrasts exactly as described in the summary, Focus on the metrics and display it.
+### STEP 5: BULLET GENERATION LOGIC
+BULLET_GENERATION → Form bullets strictly from the "Key Takeaways" section of the provided summary. Ensure every bullet is directly derived from the provided key takeaways without introducing any new interpretation, assumption, metric, or conclusion. Preserve the original meaning, comparisons, entity standings, and notable gaps or contrasts exactly as described in the summary, Focus on the metrics and display it.
 
-    ### STEP 6: KPI Defination
-    Given a KPI label and value, write a one-line definition (max 15 words) 
-    explaining what the metric measures. Be specific, avoid filler words.
+### STEP 6: KPI Defination
+Given a KPI label and value, write a one-line definition (max 15 words) 
+explaining what the metric measures. Be specific, avoid filler words.
 
-    ------------------------------------------------------------
+------------------------------------------------------------
 
-    ### OUTPUT FORMAT EXAMPLE (STRICT JSON ONLY):
+### OUTPUT FORMAT EXAMPLE (STRICT JSON ONLY):
 
-    {{
-        "title": "How does new account addition look like across regions?",
-        "bullets": [
-            "National new-account additions declined 4% versus the prior period.",
-            "West, Central, and Great Lakes outperformed the national benchmark.",
-            "West emerged as the strongest region, leading both in volume and relative performance."
-        ],
-        "kpis": [
-            {{"label": "National Account Growth", "value": "-4%","defination":"Percentage change in new accounts added versus the prior period, nationally."}},
-            {{"label": "Regions Above Benchmark", "value": "West, Central, Great Lakes", "defination":"Regions whose new-account growth rate exceeded the national average this period."}},
-            {{"label": "Regions Below Benchmark", "value": "North East, South East, Mid Atlantic","defination":"Regions whose new-account growth rate fell short of the national average this period."}}
-        ],
-        "insight": "National new-account additions declined 4%, indicating softer acquisition momentum overall. West, Central, and Great Lakes outperformed the national benchmark and can serve as reference markets for successful acquisition strategies. The largest opportunity lies in improving performance across North East, South East, and Mid Atlantic, which are contributing most to the overall regional drag."
-    }}
+{{
+    "title": "How does new account addition look like across regions?",
+    "bullets": [
+        "National new-account additions declined 4% versus the prior period.",
+        "West, Central, and Great Lakes outperformed the national benchmark.",
+        "West emerged as the strongest region, leading both in volume and relative performance."
+    ],
+    "kpis": [
+        {{"label": "National Account Growth", "value": "-4%","defination":"Percentage change in new accounts added versus the prior period, nationally."}},
+        {{"label": "Regions Above Benchmark", "value": "West, Central, Great Lakes", "defination":"Regions whose new-account growth rate exceeded the national average this period."}},
+        {{"label": "Regions Below Benchmark", "value": "North East, South East, Mid Atlantic","defination":"Regions whose new-account growth rate fell short of the national average this period."}}
+    ],
+    "insight": "National new-account additions declined 4%, indicating softer acquisition momentum overall. West, Central, and Great Lakes outperformed the national benchmark and can serve as reference markets for successful acquisition strategies. The largest opportunity lies in improving performance across North East, South East, and Mid Atlantic, which are contributing most to the overall regional drag."
+}}
 
-    ------------------------------------------------------------
+------------------------------------------------------------
 
-    ### STRICT GUIDELINES
+### STRICT GUIDELINES
 
-    TITLE:
-    - Max 20 words
-    - Grammatically correct version of: {question}
-    - Preserve original meaning without adding new interpretation
-    - Do not convert into an insight or statement beyond correcting grammar
+TITLE:
+- Max 20 words
+- Grammatically correct version of: {question}
+- Preserve original meaning without adding new interpretation
+- Do not convert into an insight or statement beyond correcting grammar
 
-    BULLETS:
-    - Exactly 3 bullets
+BULLETS:
+- Exactly 3 bullets
 
 
-    KPIs:
-    - Max 3 KPIs
+KPIs:
+- Max 3 KPIs
 
-    INSIGHT:
-    - 2–3 lines max
-    - Must connect data → implication → action
+INSIGHT:
+- 2–3 lines max
+- Must connect data → implication → action
 
-    ------------------------------------------------------------
+------------------------------------------------------------
 
-    ### IMPORTANT BEHAVIOR RULES
+### IMPORTANT BEHAVIOR RULES
 
-    - DO NOT repeat summary text
-    - DO NOT describe charts/data literally
-    - ALWAYS interpret patterns
-    - ALWAYS highlight:
-    → Growth OR Risk OR Opportunity
-    - Prefer sharp, executive language
+- DO NOT repeat summary text
+- DO NOT describe charts/data literally
+- ALWAYS interpret patterns
+- ALWAYS highlight:
+  → Growth OR Risk OR Opportunity
+- Prefer sharp, executive language
 
-    ------------------------------------------------------------
+------------------------------------------------------------
 
-    ### FINAL SELF-CHECK
+### FINAL SELF-CHECK
 
-    ✔ Title ≤ 20 words  
-    ✔ Exactly 3 bullets  
-    ✔ Insight is actionable  
-    ✔ KPIs match question type  
-    ✔ No generic statements  
-    ✔ Output is leadership-ready  
-    Return ONLY valid JSON. No extra text.
-    """
+✔ Title ≤ 20 words  
+✔ Exactly 3 bullets  
+✔ Insight is actionable  
+✔ KPIs match question type  
+✔ No generic statements  
+✔ Output is leadership-ready  
+Return ONLY valid JSON. No extra text.
+"""
 
     response = client.chat.completions.create(
         model="gpt-5.4",
@@ -368,6 +368,12 @@ def build_slide_object(block):
         "data": block.get("data"),
         "viz_code": block.get("viz_code")
     }
+
+def _normalize_plotly_figure(figure: dict) -> dict | None:
+    try:
+        return json.loads(json.dumps(figure, cls=PlotlyJSONEncoder))
+    except Exception:
+        return None
 
 
 def generate_chart(block):
@@ -403,6 +409,30 @@ def enrich_with_chart(slide):
 
     slide["chart_path"] = chart_path
     return slide  
+
+
+def build_slide_data(
+    messages,
+    chart_path_overrides: list[str] | None = None,
+    cancel_check: Callable[[], None] | None = None,
+):
+    blocks = parse_conversation(messages)
+    print(f"[PPT] slides: building (blocks={len(blocks)})")
+    slides = []
+    for index, block in enumerate(blocks):
+        if cancel_check:
+            cancel_check()
+        slide = build_slide_object(block)
+        if isinstance(chart_path_overrides, list):
+            override = chart_path_overrides[index] if index < len(chart_path_overrides) else None
+            slide["chart_path"] = override
+        else:
+            slide = enrich_with_chart(slide, cancel_check=cancel_check)
+        slides.append(slide)
+    print(f"[PPT] slides: built (slides={len(slides)})")
+    return slides
+
+
 
 
 
@@ -1000,24 +1030,55 @@ def create_ppt(slide_data: dict,
 # CONVENIENCE BUILDER
 # ──────────────────────────────────────────────────────────────────────────────
  
-def build_ppt(messages):
-    uploaded_pptx_path="Geron.pptx"
-    logo_path="geron_logo.png"
-    theme = (extract_theme_from_pptx(uploaded_pptx_path)
-             if uploaded_pptx_path else dict(_DEFAULT))
+def build_ppt(
+    messages,
+    output_path: str = "final_presentation.pptx",
+    uploaded_pptx_path: str | None = "Geron.pptx",
+    logo_path: str | None = "Geron_Logo.png",
+    chart_path_overrides: list[str] | None = None,
+    cancel_check: Callable[[], None] | None = None,
+) -> str:
+    resolved_template = (
+        uploaded_pptx_path
+        if uploaded_pptx_path and os.path.exists(uploaded_pptx_path)
+        else None
+    )
+    resolved_logo = logo_path if logo_path and os.path.exists(logo_path) else None
+    theme = (extract_theme_from_pptx(resolved_template)
+             if resolved_template else dict(_DEFAULT))
+
+    print(
+        "[PPT] build: start "
+        f"output={output_path} template={resolved_template or ''} logo={resolved_logo or ''}"
+    )
  
-    blocks = parse_conversation(messages)
-    slides = []
-    for block in blocks:
-        slide = build_slide_object(block)
-        slide = enrich_with_chart(slide)
-        slides.append(slide)
+    if cancel_check:
+        cancel_check()
+    slides = build_slide_data(
+        messages,
+        chart_path_overrides=chart_path_overrides,
+        cancel_check=cancel_check,
+    )
  
     prs = None
     for slide in slides:
-        prs = create_ppt(slide, prs, theme=theme, logo_path=logo_path)
+        if cancel_check:
+            cancel_check()
+        prs = create_ppt(slide, prs, theme=theme, logo_path=resolved_logo)
  
-    prs.save("final_presentation.pptx")
+    if cancel_check:
+        cancel_check()
+    prs.save(output_path)
+    print(f"[PPT] build: saved output={output_path} slides={len(slides)}")
+
+    for slide in slides:
+        chart_path = slide.get("chart_path")
+        if chart_path and os.path.exists(chart_path):
+            try:
+                os.remove(chart_path)
+            except Exception:
+                print(f"[PPT] cleanup: failed to remove chart {chart_path}")
+    return output_path
 
 
 #build_ppt(messages)

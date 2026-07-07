@@ -798,153 +798,153 @@ def build_messages(state,SYSTEM_PROMPT):
     print(get_relevant_context)
     print("-"*100)
     recent_context_prompt=f"""
-    ────────────────────────
-    CONVERSATION CONTEXT
-    ────────────────────────
+────────────────────────
+CONVERSATION CONTEXT
+────────────────────────
 
-    You will receive two sources of prior context:
+You will receive two sources of prior context:
 
 
-    * EXTRACTED CONTEXT BLOCK — structured JSON pre-processed from recent turns.
-    Contains resolved entities, periods, filters, metrics, and warnings.
-    Trust this over your own re-parsing of history for IDs, periods, and filters.
+* EXTRACTED CONTEXT BLOCK — structured JSON pre-processed from recent turns.
+  Contains resolved entities, periods, filters, metrics, and warnings.
+  Trust this over your own re-parsing of history for IDs, periods, and filters.
 
-    ────────────────────────
-    EXTRACTED CONTEXT BLOCK
-    ────────────────────────
+────────────────────────
+EXTRACTED CONTEXT BLOCK
+────────────────────────
 
-    Key fields and how to use them:
+Key fields and how to use them:
 
-    * unrelated_to_history  — If true, treat the query as standalone. Skip all
-                            carry-forward context. Inform the user this question
-                            is unrelated to the prior conversation.
-    * anchored_entities     — PRIMARY source for entity IDs. Never generate, guess,
-                            or infer IDs not present here.
-    * period_context        — PRIMARY source for the active time window.
-    * filters_applied       — Carry these forward unless the user explicitly removes them.
-    * warnings              — Surface any that affect query correctness to the user.
+* unrelated_to_history  — If true, treat the query as standalone. Skip all
+                          carry-forward context. Inform the user this question
+                          is unrelated to the prior conversation.
+* anchored_entities     — PRIMARY source for entity IDs. Never generate, guess,
+                          or infer IDs not present here.
+* period_context        — PRIMARY source for the active time window.
+* filters_applied       — Carry these forward unless the user explicitly removes them.
+* warnings              — Surface any that affect query correctness to the user.
 
-    ────────────────────────
-    RULES
-    ────────────────────────
+────────────────────────
+RULES
+────────────────────────
 
-    1. Anchor to Extracted Context
-    Use anchored_entities, period_context, and filters_applied as the authoritative
-    structured summary of recent context. Do not re-derive what they already provide.
+1. Anchor to Extracted Context
+   Use anchored_entities, period_context, and filters_applied as the authoritative
+   structured summary of recent context. Do not re-derive what they already provide.
 
-    3. Preserve Account Continuity
-    Resolve references like "those accounts", "same campuses", "previous accounts" from anchored_entities Never fabricate IDs.
+3. Preserve Account Continuity
+   Resolve references like "those accounts", "same campuses", "previous accounts" from anchored_entities Never fabricate IDs.
 
-    4. Reference Resolution
-    Pronouns and relative terms ("those", "same", "above", "them", "these") must
-    resolve to explicit entities from anchored_entities.
+4. Reference Resolution
+   Pronouns and relative terms ("those", "same", "above", "them", "these") must
+   resolve to explicit entities from anchored_entities.
 
-    5. Maintain Analytical Continuity
-    Preserve entities, filters, grouping, and business logic unless the user
-    explicitly changes them. Apply only incremental modifications.
+5. Maintain Analytical Continuity
+   Preserve entities, filters, grouping, and business logic unless the user
+   explicitly changes them. Apply only incremental modifications.
 
-    7. Trust Data Over Assumptions
-    Prefer SQL results, computed outputs, and explicit values. The extracted
-    context block is pre-validated — trust it over inference.
+7. Trust Data Over Assumptions
+   Prefer SQL results, computed outputs, and explicit values. The extracted
+   context block is pre-validated — trust it over inference.
 
-    8. Surface Warnings
-    Flag any extracted context warnings that affect the current query's correctness
-    or interpretation before or alongside your response.
+8. Surface Warnings
+   Flag any extracted context warnings that affect the current query's correctness
+   or interpretation before or alongside your response.
 
-    """
+"""
     return [
         SystemMessage(content=SYSTEM_PROMPT),
         SystemMessage(content=recent_context_prompt),
         *get_relevant_context
     ]
 
-    # def build_messages(state,SYSTEM_PROMPT):
-    #     # print("All Messages")
-    #     # print(state["messages"])
-    #     #summary_history = history_summarizer(state["messages"])
-    #     recent_messages = get_clean_recent_turns(state["messages"])
-    #     print("Recent Messages")
-    #     print(recent_messages)
-    #     print("-"*100)
-    #     recent_context_prompt=f"""
-    # ────────────────────────
-    # RECENT CONVERSATION CONTEXT (HIGHEST PRIORITY)
-    # ────────────────────────
+# def build_messages(state,SYSTEM_PROMPT):
+#     # print("All Messages")
+#     # print(state["messages"])
+#     #summary_history = history_summarizer(state["messages"])
+#     recent_messages = get_clean_recent_turns(state["messages"])
+#     print("Recent Messages")
+#     print(recent_messages)
+#     print("-"*100)
+#     recent_context_prompt=f"""
+# ────────────────────────
+# RECENT CONVERSATION CONTEXT (HIGHEST PRIORITY)
+# ────────────────────────
 
-    # The following messages represent the MOST RECENT conversation history.
+# The following messages represent the MOST RECENT conversation history.
 
-    # They contain previously computed:
+# They contain previously computed:
 
-    # * Entities (e.g., campus_accounts, parent_accounts, regions, products, tiers, segments)
-    # * Filters (e.g., date ranges, time periods, conditions)
-    # * Metrics (e.g., sales, growth, aggregates)
-    # * SQL queries and their results
-    # * Previously identified account cohorts and derived account relationships
+# * Entities (e.g., campus_accounts, parent_accounts, regions, products, tiers, segments)
+# * Filters (e.g., date ranges, time periods, conditions)
+# * Metrics (e.g., sales, growth, aggregates)
+# * SQL queries and their results
+# * Previously identified account cohorts and derived account relationships
 
-    # You MUST treat this as ACTIVE EXECUTION CONTEXT.
+# You MUST treat this as ACTIVE EXECUTION CONTEXT.
 
-    # ────────────────────────
-    # GLOBAL CONVERSATION SUMMARY
-    # ────────────────────────
+# ────────────────────────
+# GLOBAL CONVERSATION SUMMARY
+# ────────────────────────
 
-    # In addition to the recent conversation history, you will also receive a compressed summary of the broader conversation history.
+# In addition to the recent conversation history, you will also receive a compressed summary of the broader conversation history.
 
-    # This summary represents persistent analytical memory and may contain:
+# This summary represents persistent analytical memory and may contain:
 
-    # * Previously analyzed trends
-    # * Important business findings
-    # * Historical entity relationships
-    # * Earlier filters and comparisons
-    # * Repeated user intent patterns
-    # * Previously identified campus_accounts and parent_accounts
+# * Previously analyzed trends
+# * Important business findings
+# * Historical entity relationships
+# * Earlier filters and comparisons
+# * Repeated user intent patterns
+# * Previously identified campus_accounts and parent_accounts
 
-    # Use this summary to maintain long-range conversational continuity while prioritizing the RECENT CONVERSATION CONTEXT when conflicts occur.
+# Use this summary to maintain long-range conversational continuity while prioritizing the RECENT CONVERSATION CONTEXT when conflicts occur.
 
-    # ────────────────────────
-    # RULES
-    # ────────────────────────
+# ────────────────────────
+# RULES
+# ────────────────────────
 
-    # 1. Anchor to Recent Context
+# 1. Anchor to Recent Context
 
-    #    * Always use the RECENT CONVERSATION CONTEXT to interpret the current request.
-    #    * Prefer the MOST RECENT relevant entities, filters, metrics, and results.
+#    * Always use the RECENT CONVERSATION CONTEXT to interpret the current request.
+#    * Prefer the MOST RECENT relevant entities, filters, metrics, and results.
 
-    # 2. Use Global Summary as Long-Term Memory
+# 2. Use Global Summary as Long-Term Memory
 
-    #    * Use the GLOBAL CONVERSATION SUMMARY to recover historical context and previously derived analytical knowledge.
-    #    * Do NOT override recent context using older summary information unless explicitly requested.
+#    * Use the GLOBAL CONVERSATION SUMMARY to recover historical context and previously derived analytical knowledge.
+#    * Do NOT override recent context using older summary information unless explicitly requested.
 
-    # 3. Preserve Account Continuity
+# 3. Preserve Account Continuity
 
-    #    * Maintain continuity of previously identified campus_accounts and parent_accounts across follow-up queries.
-    #    * If the user references "those accounts", "same campuses", "same parents", "previous accounts", or similar language, resolve them using the most recently derived account sets.
-    #    * Reuse previously computed account cohorts whenever possible instead of recomputing them.
+#    * Maintain continuity of previously identified campus_accounts and parent_accounts across follow-up queries.
+#    * If the user references "those accounts", "same campuses", "same parents", "previous accounts", or similar language, resolve them using the most recently derived account sets.
+#    * Reuse previously computed account cohorts whenever possible instead of recomputing them.
 
-    # 4. Reference Resolution
+# 4. Reference Resolution
 
-    #    * Terms like "those", "them", "same", "above", "previous", "that", or "these accounts"
-    #      MUST be resolved using the recent conversation context first, followed by the global summary if needed.
+#    * Terms like "those", "them", "same", "above", "previous", "that", or "these accounts"
+#      MUST be resolved using the recent conversation context first, followed by the global summary if needed.
 
-    # 5. Do NOT Recompute
+# 5. Do NOT Recompute
 
-    #    * If entities, filters, account cohorts, or results already exist, reuse them.
-    #    * Do NOT generate new values if they can be derived from prior context.
+#    * If entities, filters, account cohorts, or results already exist, reuse them.
+#    * Do NOT generate new values if they can be derived from prior context.
 
-    # 6. Maintain Analytical Continuity
+# 6. Maintain Analytical Continuity
 
-    #    * Preserve the same entities, filters, grouping, account definitions, and business logic unless explicitly changed by the user.
-    #    * Apply only incremental modifications requested in the current query.
+#    * Preserve the same entities, filters, grouping, account definitions, and business logic unless explicitly changed by the user.
+#    * Apply only incremental modifications requested in the current query.
 
-    # 7. Trust Data Over Assumptions
+# 7. Trust Data Over Assumptions
 
-    #    * Prefer SQL results, computed outputs, and explicit values over inferred logic or assumptions.
+#    * Prefer SQL results, computed outputs, and explicit values over inferred logic or assumptions.
 
-    # """
-    #     return [
-    #         SystemMessage(content=SYSTEM_PROMPT),
-    #         SystemMessage(content=recent_context_prompt),
-    #         *recent_messages
-    #     ]
+# """
+#     return [
+#         SystemMessage(content=SYSTEM_PROMPT),
+#         SystemMessage(content=recent_context_prompt),
+#         *recent_messages
+#     ]
 
 
 def query_decomposer_node(state: AgentState):
@@ -965,370 +965,7 @@ def query_decomposer_node(state: AgentState):
 
         prompt=f"""You are a Query Decomposer agent.
 
-        Your responsibility is to analyze a natural-language user question and convert it into a structured, deterministic JSON specification that describes HOW a SQL query should be constructed by a downstream SQL Generator.
-
-        You must NOT generate SQL.
-        You must NOT generate pseudo-SQL.
-        You must describe intent, logic, filters, aggregations, grouping, ordering, subqueries, and validation rules in structured JSON.
-
-        The SQL Generator will rely entirely on your JSON output.
-
-        ────────────────────────
-        INPUT
-        ────────────────────────
-        You will receive:
-        1. A natural-language user question
-        2. The table schema and allowed column values
-        3. Optional feedback from SQL Reviewer or Human
-                                            
-        USER QUERY
-        ────────────────────────
-        {user_input}
-        ────────────────────────
-
-        Previous decomposition:
-            {state['query_decomposer_output']}
-
-        Rejection source: {review['source']}
-        Reason: {review['reason']}
-
-        Revise the decomposition to address the feedback.
-
-        ────────────────────────
-        STRICT RULES (MANDATORY)
-        ────────────────────────
-        - Output MUST be valid JSON only
-        - Do NOT output explanations or markdown
-        - Do NOT output SQL or pseudo-SQL
-        - Use ONLY the provided table and columns
-        - Do NOT invent columns, tables, or values
-        - Be explicit and deterministic
-        - Every filter, aggregation, and grouping must be stated
-        - If feedback is provided, revise ONLY the affected parts
-        - Preserve correct logic from previous decompositions
-        
-
-        ────────────────────────
-        Metric & Output Handling Rules (Must Always Be Enforced):
-        ────────────────────────
-        Enrollment Table Rules:
-            
-            For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
-            For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
-            When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
-            When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
-            When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
-            New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
-            For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
-            Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
-
-        Dispense Table Rules:    
-
-            Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table, always display the following fields in the output: Parent ID, Parent Name, Activation Date, Top 63 Flag, Area, Region, Territory, LTD Start Date, LTD End Date
-            Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
-
-        Cross Table Rules (ENROLLMENTS + Dispense):
-
-            Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
-
-        Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
-
-            Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never apply enrollment-based filters or conditions that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when enrollment-derived attributes are unavailable.
-            Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-            Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth. 
-            Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
-
-        Cross Tables Rules (Dispense + SD_SHIPMENTS):
-            Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
-            Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
-            Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
-
-        Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-            To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
-
-        Default Rules:
-            If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
-            For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
-            Always accompany any growth metric or percentage value with the corresponding absolute volume value.
-            Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-            Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
-            Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
-            Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
-            Whenever a query involves a trend, you must always display the cumulative sum alongside it.
-
-        Time period Rules:
-            LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
-            The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
-            If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
-            For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
-            Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
-            For any trend related quer anchor to year to date, and display by week metrics
-            When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
-            When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
-            Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
-            If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
-            All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
-            When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
-            When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
-
-            max_week_end_date = MAX(week_end_date)
-
-            The **current or recent period** is the period that contains max_week_end_date.
-
-            ---
-
-            CALENDAR PERIOD BOUNDARIES
-
-            Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
-
-            Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
-
-            Use calendar logic:
-
-            Month start = first day of the month
-            Month end = last day of the month
-
-            Quarter start = first day of the quarter
-            Quarter end = last day of the quarter
-
-            Year start = January 1
-            Year end = December 31
-
-            Dataset dates must **never define the start or end of a calendar period**.
-
-            ---
-
-            PERIOD COMPLETENESS
-
-            A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
-
-            Month is complete if:
-
-            max_week_end_date >= month_end_date
-
-            Quarter is complete if:
-
-            max_week_end_date >= quarter_end_date
-
-            Year is complete if:
-
-            max_week_end_date >= year_end_date
-
-            If:
-
-            max_week_end_date < calendar_period_end
-
-            then the period must be treated as **incomplete**.
-
-            Never determine completeness using the **number of weeks present in the data**.
-
-            ---
-
-            WEEK DEFINITION
-
-            Weeks are defined using **week_end_date** and span:
-
-            Saturday (week_end_date − 6 days) → Friday (week_end_date)
-
-            ---
-
-            CALCULATION ORDER (MANDATORY)
-
-            All calculations must follow this strict order:
-
-            For comparisons:
-            1. Identify requested time periods.
-            2. Determine calendar boundaries.
-            3. Check completeness using max_week_end_date.
-            - Make a decision based on period completness:
-            CASE 
-            WHEN pc.is_recent_period_complete = 1 
-            AND pc.is_previous_period_complete = 1
-            THEN total_growth
-            ELSE NULL
-            END AS total_growth (VERY IMPORTANT)
-            4. If both periods are complete → aggregate totals at period level and display total growth.
-            5. Perform the comparison.
-            For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
-
-            ---
-
-            Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
-
-        TABLE SCHEMA:
-
-        Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-        - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-        - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-        - payer_name (VARCHAR): payer or insurance provider name
-        - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-        - npi (NUMBER): National Provider Identifier (HCP unique ID)
-        - hcp_name (VARCHAR): healthcare provider name
-        - status (VARCHAR): enrollment or patient status
-        - enrollment_source (VARCHAR): source/channel of enrollment
-        - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-        - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-        - primary_speciality (VARCHAR): primary medical specialty of HCP
-        - parent_name (VARCHAR): parent account or organization name
-        - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-        - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-        - state (VARCHAR): HCP or account state
-        - zip (NUMBER): ZIP/postal code
-        - region (VARCHAR): sales or operational region
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): sales territory name
-        - crinetics_id (VARCHAR): internal Crinetics identifier
-        - hub_patient_id (VARCHAR): unique patient ID from hub system
-        - hcp_address (VARCHAR): healthcare provider address
-        - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - managing_entity (VARCHAR): entity responsible for patient/account management
-        - reason (VARCHAR): reason associated with enrollment or status
-        - bottles_dispensed (NUMBER): number of bottles dispensed
-        - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-        - latest_dispensed_date (DATE): most recent dispense date
-        - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-        - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-        - last_call_date_hcp (DATE): most recent HCP call date
-        - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-        - parent_id (VARCHAR): parent account identifier
-        - child_id (VARCHAR): child/sub-account identifier
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - year (VARCHAR): year label  (e.g., 2025)
-        - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-        - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
-
-        Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
-
-        - npi (NUMBER): National Provider Identifier (HCP unique ID).
-        - hcp_name (VARCHAR): Healthcare provider name.
-        - region (VARCHAR): Sales or operational region.
-        - territory (VARCHAR): Sales territory name.
-        - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-        - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-        - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-        - parent_name (VARCHAR): Name of the parent account or health system.
-        - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-        - child_name (VARCHAR): Name of the child account, facility, or campus.
-        - parent_state (VARCHAR): State in which the parent account is located.
-        - child_state (VARCHAR): State in which the child account is located.
-        - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-        - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-        Table SD_SHIPMENTS - Shipments from Specialty Distributor
-        - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-        - parent_name (VARCHAR): Name of the parent account or health system.
-        - parent_id (VARCHAR): parent account identifier
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - year (VARCHAR): year label  (e.g., 2025)
-        - region (VARCHAR): Sales or operational region.
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): Sales territory name.
-        - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-        - number_of_bottles (NUMBER): number of bottles dispensed
-        - dosage (VARCHAR): (values: 40 mg, 60 mg)
-        - address (VARCHAR): Parent Account Address
-        - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-
-        Table Dispense - Drug Dispense Data
-        - crinetics_id (VARCHAR): internal Crinetics identifier
-        - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-        - bottles_dispensed (NUMBER): number of bottles dispensed
-        - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-        - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-        - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-        - region (VARCHAR): Sales or operational region.
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): Sales territory name.
-        - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-        - npi (NUMBER): National Provider Identifier (HCP unique ID)
-        - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - year (VARCHAR): year label  (e.g., 2025)
-
-
-        ────────────────────────
-        DATE & TIME LOGIC RULES
-        ────────────────────────
-        - If the user asks for "latest", "most recent", or "max date":
-        → Explicitly require a subquery to compute MAX(date_column)
-        → Never use system date
-        - Rolling windows (e.g. last 13 weeks):
-        → Must be calculated relative to the maximum date in the data
-        - Quarters and months must align with quarter_year and month_year columns
-
-        ────────────────────────
-        REQUIRED JSON STRUCTURE
-        ────────────────────────
-        Your output MUST follow this structure:
-
-        {{
-        "intent_summary": string,
-        "tables": [string],
-        "filters": [
-            {{
-            "column": string,
-            "operator": string,
-            "value": string | number | "derived:max_date" | "derived:rolling_window"
-            }}
-        ],
-        "aggregations": [
-            {{
-            "metric_name": string,
-            "function": "SUM" | "COUNT" | "AVG",
-            "column": string,
-            "group_level": "none" | "column_name"
-            }}
-        ],
-        "subqueries": [
-            {{
-            "name": string,
-            "purpose": string,
-            "logic": string
-            }}
-        ],
-        "group_by": [string],
-        "order_by": [
-            {{
-            "column": string,
-            "direction": "ASC" | "DESC"
-            }}
-        ],
-        "limit": number | null,
-        "final_output": {{
-            "columns": [string],
-            "row_granularity": "single_row" | "per_group"
-        }},
-        "validation_rules": [string],
-        "rag_alignment": {{
-        "rag_provided": boolean,
-        "used_examples": [string],
-        "borrowed_patterns": [string],
-        "differences_from_examples": [string]
-            }}
-        }}
-
-
-    {query_decomposer_rag_examples_text}
-
-        ────────────────────────
-        FINAL REMINDER
-        ────────────────────────
-        - Output ONLY valid JSON
-        - Follow the required structure exactly
-        - Do NOT output SQL, markdown, or explanations
-        """
-
-    else :
-        prompt=f"""You are a Query Decomposer agent.
-
-    Your responsibility is to analyze conversational natural-language input and convert it into a structured, deterministic JSON specification that describes HOW a SQL query should be constructed by a downstream SQL Generator.
+    Your responsibility is to analyze a natural-language user question and convert it into a structured, deterministic JSON specification that describes HOW a SQL query should be constructed by a downstream SQL Generator.
 
     You must NOT generate SQL.
     You must NOT generate pseudo-SQL.
@@ -1337,403 +974,1193 @@ def query_decomposer_node(state: AgentState):
     The SQL Generator will rely entirely on your JSON output.
 
     ────────────────────────
-    INPUT HANDLING
-    ────────────────────────
-    You will receive recent conversation context and the latest Human message.
-
-    IMPORTANT:
-    - The latest Human message is the PRIMARY source of intent.
-    - Prior context is for reference only and must be used to:
-    - Preserve correct previously established logic
-    - Resolve references (e.g., “same as before”, “change this”)
-    - If there is any conflict, the latest Human message overrides prior intent.
-    - If the latest message requests a modification, apply ONLY the requested changes.
-    - If the latest message restates the request, treat it as a full replacement.
-
-
-    ────────────────────────
-    CONTEXT CONTINUITY (CRITICAL)
-    ────────────────────────
-    Recent messages contain previously computed:
-
-    Entities (e.g., accounts, regions, products, tiers, segments)
-    Filters (e.g., date ranges, time periods, conditions)
-    Metrics (e.g., sales, growth, aggregates)
-    Grouping and aggregation logic
-
-    You MUST treat them as ACTIVE CONTEXT.
-
-    Rules:
-
-    Reference Resolution:
-    If the user refers to:
-    "those", "them", "same", "above", "previous", "that"
-    → Resolve using the MOST RECENT relevant context.
-    Entity & Filter Reuse:
-    NEVER regenerate entities or filters if they already exist.
-    ALWAYS reuse exact values from prior results when available.
-    Continuity Enforcement:
-    Maintain SAME entities
-    Maintain SAME filters (unless explicitly changed)
-    Maintain SAME grouping level and granularity
-    Incremental Changes Only:
-    If the user asks for a modification (e.g., growth, comparison, breakdown),
-    apply ONLY that change on top of existing context.
-    Do NOT recompute from scratch unless explicitly asked.
-    Source of Truth Priority:
-    Resolve context using:
-    (1) SQL Query Results (highest priority)
-    (2) Explicit values mentioned in prior messages
-    (3) SQL Query logic
-
-    ────────────────────────
     INPUT
     ────────────────────────
-    USER QUERY (LATEST HUMAN MESSAGE)
+    You will receive:
+    1. A natural-language user question
+    2. The table schema and allowed column values
+    3. Optional feedback from SQL Reviewer or Human
+                                        
+    USER QUERY
+    ────────────────────────
     {user_input}
+    ────────────────────────
 
-        ────────────────────────
-        STRICT RULES (MANDATORY)
-        ────────────────────────
-        - Output MUST be valid JSON only
-        - Do NOT output explanations or markdown
-        - Do NOT output SQL or pseudo-SQL
-        - Use ONLY the provided table and columns
-        - Do NOT invent columns, tables, or values
-        - Be explicit and deterministic
-        - Every filter, aggregation, and grouping must be stated
-        - If feedback is provided, revise ONLY the affected parts
-        - Preserve correct logic from previous decompositions
-        
+    Previous decomposition:
+        {state['query_decomposer_output']}
 
-        ────────────────────────
-        Metric & Output Handling Rules (Must Always Be Enforced):
-        ────────────────────────
-        Enrollment Table Rules:
-        
-        For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
-        For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
-        When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
-        When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
-        When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
-        New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
-        For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
-        Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
+    Rejection source: {review['source']}
+    Reason: {review['reason']}
 
-    Dispense Table Rules:    
-
-        Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
-        Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
-
-    Cross Table Rules (ENROLLMENTS + Dispense):
-
-        Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
-
-    Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
-
-        Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
-        Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-        Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.
-        Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
-
-    Cross Tables Rules (Dispense + SD_SHIPMENTS):
-        Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
-        Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
-        Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
-
-    Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-        To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
-
-    Default Rules:
-        If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
-        For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
-        Always accompany any growth metric or percentage value with the corresponding absolute volume value.
-        Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-        Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
-        Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
-        Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
-        Whenever a query involves a trend, you must always display the cumulative sum alongside it.
-
-    Time period Rules:
-        LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
-        The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
-        If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
-        For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
-        Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
-        For any trend related quer anchor to year to date, and display by week metrics
-        When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
-        When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
-        Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
-        If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
-        All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
-        When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
-        When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
-
-        max_week_end_date = MAX(week_end_date)
-
-        The **current or recent period** is the period that contains max_week_end_date.
-
-        ---
-
-        CALENDAR PERIOD BOUNDARIES
-
-        Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
-
-        Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
-
-        Use calendar logic:
-
-        Month start = first day of the month
-        Month end = last day of the month
-
-        Quarter start = first day of the quarter
-        Quarter end = last day of the quarter
-
-        Year start = January 1
-        Year end = December 31
-
-        Dataset dates must **never define the start or end of a calendar period**.
-
-        ---
-
-        PERIOD COMPLETENESS
-
-        A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
-
-        Month is complete if:
-
-        max_week_end_date >= month_end_date
-
-        Quarter is complete if:
-
-        max_week_end_date >= quarter_end_date
-
-        Year is complete if:
-
-        max_week_end_date >= year_end_date
-
-        If:
-
-        max_week_end_date < calendar_period_end
-
-        then the period must be treated as **incomplete**.
-
-        Never determine completeness using the **number of weeks present in the data**.
-
-        ---
-
-        WEEK DEFINITION
-
-        Weeks are defined using **week_end_date** and span:
-
-        Saturday (week_end_date − 6 days) → Friday (week_end_date)
-
-        ---
-
-        CALCULATION ORDER (MANDATORY)
-
-        All calculations must follow this strict order:
-
-        For comparisons:
-        1. Identify requested time periods.
-        2. Determine calendar boundaries.
-        3. Check completeness using max_week_end_date.
-        - Make a decision based on period completness:
-        CASE 
-        WHEN pc.is_recent_period_complete = 1 
-        AND pc.is_previous_period_complete = 1
-        THEN total_growth
-        ELSE NULL
-        END AS total_growth (VERY IMPORTANT)
-        4. If both periods are complete → aggregate totals at period level and display total growth.
-        5. Perform the comparison.
-        For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
-
-        ---
-
-        Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
-
-
-    TABLE SCHEMA:
-
-    Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-    - payer_name (VARCHAR): payer or insurance provider name
-    - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - hcp_name (VARCHAR): healthcare provider name
-    - status (VARCHAR): enrollment or patient status
-    - enrollment_source (VARCHAR): source/channel of enrollment
-    - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-    - primary_speciality (VARCHAR): primary medical specialty of HCP
-    - parent_name (VARCHAR): parent account or organization name
-    - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-    - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-    - state (VARCHAR): HCP or account state
-    - zip (NUMBER): ZIP/postal code
-    - region (VARCHAR): sales or operational region
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): sales territory name
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - hub_patient_id (VARCHAR): unique patient ID from hub system
-    - hcp_address (VARCHAR): healthcare provider address
-    - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - managing_entity (VARCHAR): entity responsible for patient/account management
-    - reason (VARCHAR): reason associated with enrollment or status
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-    - latest_dispensed_date (DATE): most recent dispense date
-    - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-    - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-    - last_call_date_hcp (DATE): most recent HCP call date
-    - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-    - parent_id (VARCHAR): parent account identifier
-    - child_id (VARCHAR): child/sub-account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-    - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
-
-    Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
-
-    - npi (NUMBER): National Provider Identifier (HCP unique ID).
-    - hcp_name (VARCHAR): Healthcare provider name.
-    - region (VARCHAR): Sales or operational region.
-    - territory (VARCHAR): Sales territory name.
-    - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-    - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-    - child_name (VARCHAR): Name of the child account, facility, or campus.
-    - parent_state (VARCHAR): State in which the parent account is located.
-    - child_state (VARCHAR): State in which the child account is located.
-    - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-    Table SD_SHIPMENTS - Shipments from Specialty Distributor
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - parent_id (VARCHAR): parent account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-    - number_of_bottles (NUMBER): number of bottles dispensed
-    - dosage (VARCHAR): (values: 40 mg, 60 mg)
-    - address (VARCHAR): Parent Account Address
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-
-    Table Dispense - Drug Dispense Data
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-    - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-    - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-            
-        ────────────────────────
-        DATE & TIME LOGIC RULES
-        ────────────────────────
-        - If the user asks for "latest", "most recent", or "max date":
-        → Explicitly require a subquery to compute MAX(date_column)
-        → Never use system date
-        - Rolling windows (e.g. last 13 weeks):
-        → Must be calculated relative to the maximum date in the data
-        - Quarters and months must align with quarter_year and month_year columns
+    Revise the decomposition to address the feedback.
 
     ────────────────────────
-        REQUIRED JSON STRUCTURE
-        ────────────────────────
-        Your output MUST follow this structure:
-
-        {{
-        "intent_summary": string,
-        "tables": [string],
-        "filters": [
-            {{
-            "column": string,
-            "operator": string,
-            "value": string | number | "derived:max_date" | "derived:rolling_window"
-            }}
-        ],
-        "aggregations": [
-            {{
-            "metric_name": string,
-            "function": "SUM" | "COUNT" | "AVG",
-            "column": string,
-            "group_level": "none" | "column_name"
-            }}
-        ],
-        "subqueries": [
-            {{
-            "name": string,
-            "purpose": string,
-            "logic": string
-            }}
-        ],
-        "group_by": [string],
-        "order_by": [
-            {{
-            "column": string,
-            "direction": "ASC" | "DESC"
-            }}
-        ],
-        "limit": number | null,
-        "final_output": {{
-            "columns": [string],
-            "row_granularity": "single_row" | "per_group"
-        }},
-        "validation_rules": [string],
-        "rag_alignment": {{
-        "rag_provided": boolean,
-        "used_examples": [string],
-        "borrowed_patterns": [string],
-        "differences_from_examples": [string]
-            }}
-        }}
+    STRICT RULES (MANDATORY)
+    ────────────────────────
+    - Output MUST be valid JSON only
+    - Do NOT output explanations or markdown
+    - Do NOT output SQL or pseudo-SQL
+    - Use ONLY the provided table and columns
+    - Do NOT invent columns, tables, or values
+    - Be explicit and deterministic
+    - Every filter, aggregation, and grouping must be stated
+    - If feedback is provided, revise ONLY the affected parts
+    - Preserve correct logic from previous decompositions
     
-    {query_decomposer_rag_examples_text}
 
-        ────────────────────────
-        FINAL REMINDER
-        ────────────────────────
-        - Output ONLY valid JSON
-        - Follow the required structure exactly
-        - Do NOT output SQL, markdown, or explanations
-        """
+ ────────────────────────
+    Metric & Output Handling Rules (Must Always Be Enforced):
+    ────────────────────────
+Enrollment Table Rules:
+    
+    For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
+    For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
+    When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
+    When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
+    When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
+    New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
+    For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
+    Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
+
+Dispense Table Rules:    
+
+    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table, always display the following fields in the output: Parent ID, Parent Name, Activation Date, Top 63 Flag, Area, Region, Territory, LTD Start Date, LTD End Date
+    Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
+
+Cross Table Rules (ENROLLMENTS + Dispense):
+
+    Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
+
+Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
+
+    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never apply enrollment-based filters or conditions that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when enrollment-derived attributes are unavailable.
+    Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
+    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth. 
+    Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
+
+Cross Tables Rules (Dispense + SD_SHIPMENTS):
+    Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
+    Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
+    Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+
+CALL_TABLE USAGE INSTRUCTIONS:
+    This table is the primary source for all queries related to calls, reach, call frequency, and effort.
+
+    Column Guidance:
+        For any query involving calls, call frequency, or call effort, filter channel to include only Face To Face, Phone, and Video — exclude Email by default.
+        Only include Email if:
+            The user explicitly asks to include it, or
+            The query involves grouping/breakdown by channel_type (e.g., "show calls by channel type"), in which case include all 4 values.
+
+        The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+            To filter for Territory-level data, set geo_type = 'Territory'.
+            To filter for Area-level data, set geo_type = 'Area'.
+        Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+
+Query Handling Rules:
+
+1. Calls / Effort:
+- Always use call_table.
+- Apply the requested time period and geography/tier filters.
+- Effort should be interpreted as total activity count (calls).
+
+
+3. Reach:
+- Reach = (distinct target hcp npi reached) / (distinct total target hcp npi).
+- Ensure non-target campuses are excluded from the numerator.
+
+    - Calculation logic by geography level:
+    - Territory:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'N'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per territory.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Territory-level data, set geo_type = 'Territory'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND territory (exact match on both fields) — this ensures an HCP counts as "reached" only under the territory they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per territory).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+    - Area:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'Y'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per area.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Area-level data, set geo_type = 'Area'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND AREA (exact match on both fields) — this ensures an HCP counts as "reached" only under the area they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per area).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - POD:
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per pod.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND pod (exact match on both fields) — this ensures an HCP counts as "reached" only under the pod they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per pod).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - Region:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per region.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND region (exact match on both fields) — this ensures an HCP counts as "reached" only under the region they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per region).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - Nation:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values for nation.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on hcp npi.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+Call Frequency:
+
+    Frequency = (total number of calls to reached target HCPs) / (distinct count of target HCP npi reached).
+    The denominator (unique targets reached) is calculated exactly as the numerator in the Reach calculation for the corresponding geography level — i.e., reuse that same joined/filtered "Reached HCPs" set.
+    The numerator (number of calls to target) is the total call count on that same joined/filtered "Reached HCPs" set (not all calls in the raw call_data table) — i.e., only calls belonging to hcp npi that made it into the reached set for that geography.
+    Apply the same channel filtering as call_table usage instructions: include only Face To Face, Phone, and Video by default; include Email only if explicitly requested or if breaking down by channel_type.
+    Geography logic (Territory / Area / POD / Region / Nation) is identical to Reach — same target universe construction (sam_focus, tier filters), same geo_type constraint on call_stamped_territory_area, same join keys (hcp npi + territory/area/pod/region as applicable), and same non-target campus exclusion.
+
+    Calculation logic by geography level:
+
+    Territory:
+
+    Reached HCPs set = same as Reach → Territory, Step 2 (target universe from sam_focus = 'N', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Territory' and time period, on hcp npi + territory, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (rows in call_data, channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Area:
+
+    Reached HCPs set = same as Reach → Area, Step 2 (target universe from sam_focus = 'Y', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Area' and time period, on hcp npi + area, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    POD:
+
+    Reached HCPs set = same as Reach → POD, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + pod, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Region:
+
+    Reached HCPs set = same as Reach → Region, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + region, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Nation:
+
+    Reached HCPs set = same as Reach → Nation, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+Important Constraints:
+- All frequency, reach, and average calls metrics must be formatted to exactly one decimal place. Do not return whole numbers or more than one decimal.
+- Always apply identical filters (time period, geography/tier) across numerator and denominator.
+
+
+Interpretation Rules:
+- "Coverage" → reach
+- If ambiguous, default to call-based interpretation and state assumption.
+
+Default Rules:
+    If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
+    For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
+    Always accompany any growth metric or percentage value with the corresponding absolute volume value.
+    Whenever the query references “nation,” compute the national-level metrics and include them in the output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
+    Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
+    Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
+    
+
+Time period Rules:
+    LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
+    If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
+    For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
+    Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
+    For any trend related quer anchor to year to date, and display by week metrics
+    When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
+    When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
+    Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
+    If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
+    All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
+    When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
+    When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
+
+    max_week_end_date = MAX(week_end_date)
+
+    The **current or recent period** is the period that contains max_week_end_date.
+
+    ---
+
+    CALENDAR PERIOD BOUNDARIES
+
+    Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
+
+    Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
+
+    Use calendar logic:
+
+    Month start = first day of the month
+    Month end = last day of the month
+
+    Quarter start = first day of the quarter
+    Quarter end = last day of the quarter
+
+    Year start = January 1
+    Year end = December 31
+
+    Dataset dates must **never define the start or end of a calendar period**.
+
+    ---
+
+    PERIOD COMPLETENESS
+
+    A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
+
+    Month is complete if:
+
+    max_week_end_date >= month_end_date
+
+    Quarter is complete if:
+
+    max_week_end_date >= quarter_end_date
+
+    Year is complete if:
+
+    max_week_end_date >= year_end_date
+
+    If:
+
+    max_week_end_date < calendar_period_end
+
+    then the period must be treated as **incomplete**.
+
+    Never determine completeness using the **number of weeks present in the data**.
+
+    ---
+
+    WEEK DEFINITION
+
+    Weeks are defined using **week_end_date** and span:
+
+    Saturday (week_end_date − 6 days) → Friday (week_end_date)
+
+    ---
+
+    CALCULATION ORDER (MANDATORY)
+
+    All calculations must follow this strict order:
+
+    For comparisons:
+    1. Identify requested time periods.
+    2. Determine calendar boundaries.
+    3. Check completeness using max_week_end_date.
+    - Make a decision based on period completness:
+    CASE 
+    WHEN pc.is_recent_period_complete = 1 
+    AND pc.is_previous_period_complete = 1
+    THEN total_growth
+    ELSE NULL
+    END AS total_growth (VERY IMPORTANT)
+    4. If both periods are complete → aggregate totals at period level and display total growth.
+    5. Perform the comparison.
+    For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
+
+    ---
+
+    Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
+
+TABLE SCHEMA:
+
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
+
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
+
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
+
+    ────────────────────────
+    DATE & TIME LOGIC RULES
+    ────────────────────────
+    - If the user asks for "latest", "most recent", or "max date":
+    → Explicitly require a subquery to compute MAX(date_column)
+    → Never use system date
+    - Rolling windows (e.g. last 13 weeks):
+    → Must be calculated relative to the maximum date in the data
+    - Quarters and months must align with quarter_year and month_year columns
+
+    ────────────────────────
+    REQUIRED JSON STRUCTURE
+    ────────────────────────
+    Your output MUST follow this structure:
+
+    {{
+    "intent_summary": string,
+    "tables": [string],
+    "filters": [
+        {{
+        "column": string,
+        "operator": string,
+        "value": string | number | "derived:max_date" | "derived:rolling_window"
+        }}
+    ],
+    "aggregations": [
+        {{
+        "metric_name": string,
+        "function": "SUM" | "COUNT" | "AVG",
+        "column": string,
+        "group_level": "none" | "column_name"
+        }}
+    ],
+    "subqueries": [
+        {{
+        "name": string,
+        "purpose": string,
+        "logic": string
+        }}
+    ],
+    "group_by": [string],
+    "order_by": [
+        {{
+        "column": string,
+        "direction": "ASC" | "DESC"
+        }}
+    ],
+    "limit": number | null,
+    "final_output": {{
+        "columns": [string],
+        "row_granularity": "single_row" | "per_group"
+    }},
+    "validation_rules": [string],
+    "rag_alignment": {{
+    "rag_provided": boolean,
+    "used_examples": [string],
+    "borrowed_patterns": [string],
+    "differences_from_examples": [string]
+         }}
+    }}
+
+
+   {query_decomposer_rag_examples_text}
+
+    ────────────────────────
+    FINAL REMINDER
+    ────────────────────────
+    - Output ONLY valid JSON
+    - Follow the required structure exactly
+    - Do NOT output SQL, markdown, or explanations
+    """
+
+    else :
+
+        prompt=f"""You are a Query Decomposer agent.
+
+Your responsibility is to analyze conversational natural-language input and convert it into a structured, deterministic JSON specification that describes HOW a SQL query should be constructed by a downstream SQL Generator.
+
+You must NOT generate SQL.
+You must NOT generate pseudo-SQL.
+You must describe intent, logic, filters, aggregations, grouping, ordering, subqueries, and validation rules in structured JSON.
+
+The SQL Generator will rely entirely on your JSON output.
+
+────────────────────────
+INPUT HANDLING
+────────────────────────
+You will receive recent conversation context and the latest Human message.
+
+IMPORTANT:
+- The latest Human message is the PRIMARY source of intent.
+- Prior context is for reference only and must be used to:
+  - Preserve correct previously established logic
+  - Resolve references (e.g., “same as before”, “change this”)
+- If there is any conflict, the latest Human message overrides prior intent.
+- If the latest message requests a modification, apply ONLY the requested changes.
+- If the latest message restates the request, treat it as a full replacement.
+
+
+────────────────────────
+CONTEXT CONTINUITY (CRITICAL)
+────────────────────────
+Recent messages contain previously computed:
+
+Entities (e.g., accounts, regions, products, tiers, segments)
+Filters (e.g., date ranges, time periods, conditions)
+Metrics (e.g., sales, growth, aggregates)
+Grouping and aggregation logic
+
+You MUST treat them as ACTIVE CONTEXT.
+
+Rules:
+
+Reference Resolution:
+If the user refers to:
+"those", "them", "same", "above", "previous", "that"
+→ Resolve using the MOST RECENT relevant context.
+Entity & Filter Reuse:
+NEVER regenerate entities or filters if they already exist.
+ALWAYS reuse exact values from prior results when available.
+Continuity Enforcement:
+Maintain SAME entities
+Maintain SAME filters (unless explicitly changed)
+Maintain SAME grouping level and granularity
+Incremental Changes Only:
+If the user asks for a modification (e.g., growth, comparison, breakdown),
+apply ONLY that change on top of existing context.
+Do NOT recompute from scratch unless explicitly asked.
+Source of Truth Priority:
+Resolve context using:
+(1) SQL Query Results (highest priority)
+(2) Explicit values mentioned in prior messages
+(3) SQL Query logic
+
+────────────────────────
+INPUT
+────────────────────────
+USER QUERY (LATEST HUMAN MESSAGE)
+{user_input}
+
+    ────────────────────────
+    STRICT RULES (MANDATORY)
+    ────────────────────────
+    - Output MUST be valid JSON only
+    - Do NOT output explanations or markdown
+    - Do NOT output SQL or pseudo-SQL
+    - Use ONLY the provided table and columns
+    - Do NOT invent columns, tables, or values
+    - Be explicit and deterministic
+    - Every filter, aggregation, and grouping must be stated
+    - If feedback is provided, revise ONLY the affected parts
+    - Preserve correct logic from previous decompositions
+    
+
+    ────────────────────────
+    Metric & Output Handling Rules (Must Always Be Enforced):
+    ────────────────────────
+Enrollment Table Rules:
+    
+    For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
+    For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
+    When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
+    When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
+    When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
+    New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
+    For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
+    Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
+
+Dispense Table Rules:    
+
+    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
+    Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
+
+Cross Table Rules (ENROLLMENTS + Dispense):
+
+    Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
+
+Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
+
+    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
+    Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
+    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.
+    Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
+
+Cross Tables Rules (Dispense + SD_SHIPMENTS):
+    Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
+    Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
+    Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+
+CALL_TABLE USAGE INSTRUCTIONS:
+    This table is the primary source for all queries related to calls, reach, call frequency, and effort.
+
+    Column Guidance:
+        For any query involving calls, call frequency, or call effort, filter channel to include only Face To Face, Phone, and Video — exclude Email by default.
+        Only include Email if:
+            The user explicitly asks to include it, or
+            The query involves grouping/breakdown by channel_type (e.g., "show calls by channel type"), in which case include all 4 values.
+
+        The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+            To filter for Territory-level data, set geo_type = 'Territory'.
+            To filter for Area-level data, set geo_type = 'Area'.
+        Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+
+Query Handling Rules:
+
+1. Calls / Effort:
+- Always use call_table.
+- Apply the requested time period and geography/tier filters.
+- Effort should be interpreted as total activity count (calls).
+
+
+3. Reach:
+- Reach = (distinct target hcp npi reached) / (distinct total target hcp npi).
+- Ensure non-target campuses are excluded from the numerator.
+
+    - Calculation logic by geography level:
+    - Territory:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'N'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per territory.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Territory-level data, set geo_type = 'Territory'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND territory (exact match on both fields) — this ensures an HCP counts as "reached" only under the territory they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per territory).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+    - Area:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'Y'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per area.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Area-level data, set geo_type = 'Area'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND AREA (exact match on both fields) — this ensures an HCP counts as "reached" only under the area they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per area).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - POD:
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per pod.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND pod (exact match on both fields) — this ensures an HCP counts as "reached" only under the pod they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per pod).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - Region:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per region.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND region (exact match on both fields) — this ensures an HCP counts as "reached" only under the region they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per region).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - Nation:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values for nation.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on hcp npi.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+Call Frequency:
+
+    Frequency = (total number of calls to reached target HCPs) / (distinct count of target HCP npi reached).
+    The denominator (unique targets reached) is calculated exactly as the numerator in the Reach calculation for the corresponding geography level — i.e., reuse that same joined/filtered "Reached HCPs" set.
+    The numerator (number of calls to target) is the total call count on that same joined/filtered "Reached HCPs" set (not all calls in the raw call_data table) — i.e., only calls belonging to hcp npi that made it into the reached set for that geography.
+    Apply the same channel filtering as call_table usage instructions: include only Face To Face, Phone, and Video by default; include Email only if explicitly requested or if breaking down by channel_type.
+    Geography logic (Territory / Area / POD / Region / Nation) is identical to Reach — same target universe construction (sam_focus, tier filters), same geo_type constraint on call_stamped_territory_area, same join keys (hcp npi + territory/area/pod/region as applicable), and same non-target campus exclusion.
+
+    Calculation logic by geography level:
+
+    Territory:
+
+    Reached HCPs set = same as Reach → Territory, Step 2 (target universe from sam_focus = 'N', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Territory' and time period, on hcp npi + territory, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (rows in call_data, channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Area:
+
+    Reached HCPs set = same as Reach → Area, Step 2 (target universe from sam_focus = 'Y', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Area' and time period, on hcp npi + area, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    POD:
+
+    Reached HCPs set = same as Reach → POD, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + pod, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Region:
+
+    Reached HCPs set = same as Reach → Region, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + region, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+
+    Nation:
+
+    Reached HCPs set = same as Reach → Nation, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
+
+Important Constraints:
+- All frequency, reach, and average calls metrics must be formatted to exactly one decimal place. Do not return whole numbers or more than one decimal.
+- Always apply identical filters (time period, geography/tier) across numerator and denominator.
+
+
+Interpretation Rules:
+- "Coverage" → reach
+- If ambiguous, default to call-based interpretation and state assumption.
+    
+Default Rules:
+    If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
+    For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
+    Always accompany any growth metric or percentage value with the corresponding absolute volume value.
+    Whenever the query references “nation,” compute the national-level metrics and include them in the output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
+    Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
+    Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
+    
+
+Time period Rules:
+    LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
+    If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
+    For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
+    Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
+    For any trend related quer anchor to year to date, and display by week metrics
+    When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
+    When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
+    Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
+    If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
+    All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
+    When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
+    When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
+
+    max_week_end_date = MAX(week_end_date)
+
+    The **current or recent period** is the period that contains max_week_end_date.
+
+    ---
+
+    CALENDAR PERIOD BOUNDARIES
+
+    Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
+
+    Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
+
+    Use calendar logic:
+
+    Month start = first day of the month
+    Month end = last day of the month
+
+    Quarter start = first day of the quarter
+    Quarter end = last day of the quarter
+
+    Year start = January 1
+    Year end = December 31
+
+    Dataset dates must **never define the start or end of a calendar period**.
+
+    ---
+
+    PERIOD COMPLETENESS
+
+    A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
+
+    Month is complete if:
+
+    max_week_end_date >= month_end_date
+
+    Quarter is complete if:
+
+    max_week_end_date >= quarter_end_date
+
+    Year is complete if:
+
+    max_week_end_date >= year_end_date
+
+    If:
+
+    max_week_end_date < calendar_period_end
+
+    then the period must be treated as **incomplete**.
+
+    Never determine completeness using the **number of weeks present in the data**.
+
+    ---
+
+    WEEK DEFINITION
+
+    Weeks are defined using **week_end_date** and span:
+
+    Saturday (week_end_date − 6 days) → Friday (week_end_date)
+
+    ---
+
+    CALCULATION ORDER (MANDATORY)
+
+    All calculations must follow this strict order:
+
+    For comparisons:
+    1. Identify requested time periods.
+    2. Determine calendar boundaries.
+    3. Check completeness using max_week_end_date.
+    - Make a decision based on period completness:
+    CASE 
+    WHEN pc.is_recent_period_complete = 1 
+    AND pc.is_previous_period_complete = 1
+    THEN total_growth
+    ELSE NULL
+    END AS total_growth (VERY IMPORTANT)
+    4. If both periods are complete → aggregate totals at period level and display total growth.
+    5. Perform the comparison.
+    For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
+
+    ---
+
+    Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
+
+
+TABLE SCHEMA:
+
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
+
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
+
+    ────────────────────────
+    DATE & TIME LOGIC RULES
+    ────────────────────────
+    - If the user asks for "latest", "most recent", or "max date":
+    → Explicitly require a subquery to compute MAX(date_column)
+    → Never use system date
+    - Rolling windows (e.g. last 13 weeks):
+    → Must be calculated relative to the maximum date in the data
+    - Quarters and months must align with quarter_year and month_year columns
+
+  ────────────────────────
+    REQUIRED JSON STRUCTURE
+    ────────────────────────
+    Your output MUST follow this structure:
+
+    {{
+    "intent_summary": string,
+    "tables": [string],
+    "filters": [
+        {{
+        "column": string,
+        "operator": string,
+        "value": string | number | "derived:max_date" | "derived:rolling_window"
+        }}
+    ],
+    "aggregations": [
+        {{
+        "metric_name": string,
+        "function": "SUM" | "COUNT" | "AVG",
+        "column": string,
+        "group_level": "none" | "column_name"
+        }}
+    ],
+    "subqueries": [
+        {{
+        "name": string,
+        "purpose": string,
+        "logic": string
+        }}
+    ],
+    "group_by": [string],
+    "order_by": [
+        {{
+        "column": string,
+        "direction": "ASC" | "DESC"
+        }}
+    ],
+    "limit": number | null,
+    "final_output": {{
+        "columns": [string],
+        "row_granularity": "single_row" | "per_group"
+    }},
+    "validation_rules": [string],
+    "rag_alignment": {{
+    "rag_provided": boolean,
+    "used_examples": [string],
+    "borrowed_patterns": [string],
+    "differences_from_examples": [string]
+         }}
+    }}
+  
+   {query_decomposer_rag_examples_text}
+
+    ────────────────────────
+    FINAL REMINDER
+    ────────────────────────
+    - Output ONLY valid JSON
+    - Follow the required structure exactly
+    - Do NOT output SQL, markdown, or explanations
+    """
     final_prompt = build_messages(state, prompt)
     # print("Final Prompt")
     # print(final_prompt)
     print("-"*100)
     result=model.invoke(final_prompt)
-    usage = result.usage_metadata
-    input_tokens = usage.get("input_tokens", 0)
-    output_tokens = usage.get("output_tokens", 0)
-    total_tokens = usage.get("total_tokens", 0)
-    print("\n=====Query Decomposer TOKEN USAGE =====")
-    print(f"Input Tokens: {input_tokens}")
-    print(f"Output Tokens: {output_tokens}")
-    print(f"Total Tokens: {total_tokens}")
+    # usage = result.usage_metadata
+    # input_tokens = usage.get("input_tokens", 0)
+    # output_tokens = usage.get("output_tokens", 0)
+    # total_tokens = usage.get("total_tokens", 0)
+    # print("\n=====Query Decomposer TOKEN USAGE =====")
+    # print(f"Input Tokens: {input_tokens}")
+    # print(f"Output Tokens: {output_tokens}")
+    # print(f"Total Tokens: {total_tokens}")
     print("Query Decomposer Output")
     print("-"*100)
     print(result.content)
@@ -1753,392 +2180,599 @@ def sql_generator_node(state):
     query_decomposer_output=state['query_decomposer_output']
     sql_generator_rag_examples_text=state['sql_generator_rag_examples_text']
     prompt = f"""
-    You are an expert Snowflake SQL Generator.
+You are an expert Snowflake SQL Generator.
 
-    Your responsibility is to generate a valid Snowflake SELECT query based STRICTLY on the structured JSON produced by the Query Decomposer.
+Your responsibility is to generate a valid Snowflake SELECT query based STRICTLY on the structured JSON produced by the Query Decomposer.
 
-    You do NOT receive a natural-language question directly.
-    You MUST rely entirely on the Query Decomposer output.
+You do NOT receive a natural-language question directly.
+You MUST rely entirely on the Query Decomposer output.
 
-    ────────────────────────
-    INPUTS YOU WILL RECEIVE
-    ────────────────────────
-    1. Query Decomposer JSON (authoritative source of logic)
-    2. Table schema with column descriptions and example values
-    3. Optional FEEDBACK from a SQL Reviewer or Human
+────────────────────────
+INPUTS YOU WILL RECEIVE
+────────────────────────
+1. Query Decomposer JSON (authoritative source of logic)
+2. Table schema with column descriptions and example values
+3. Optional FEEDBACK from a SQL Reviewer or Human
 
-    The Query Decomposer JSON defines:
-    - Intent
-    - Tables to use
-    - Filters and operators
-    - Aggregations and metrics
-    - Grouping logic
-    - Ordering and limits
-    - Subqueries (e.g., MAX date, rolling windows)
-    - Validation constraints
+The Query Decomposer JSON defines:
+- Intent
+- Tables to use
+- Filters and operators
+- Aggregations and metrics
+- Grouping logic
+- Ordering and limits
+- Subqueries (e.g., MAX date, rolling windows)
+- Validation constraints
 
-    You must translate this JSON into executable Snowflake SQL.
+You must translate this JSON into executable Snowflake SQL.
 
-    ────────────────────────
-    STRICT RULES (MANDATORY)
-    ────────────────────────
-    - Generate ONLY SELECT queries
-    - NEVER use DELETE, UPDATE, INSERT, DROP, ALTER, or TRUNCATE
-    - Use ONLY tables and columns explicitly present in the schema
-    - Use valid Snowflake SQL syntax
-    - Do NOT hallucinate columns, tables, or joins
-    - Do NOT add logic not present in the Query Decomposer JSON
-    - Do NOT explain the query
-    - Do NOT output markdown or commentary
-    - Output ONLY the SQL query
+────────────────────────
+STRICT RULES (MANDATORY)
+────────────────────────
+- Generate ONLY SELECT queries
+- NEVER use DELETE, UPDATE, INSERT, DROP, ALTER, or TRUNCATE
+- Use ONLY tables and columns explicitly present in the schema
+- Use valid Snowflake SQL syntax
+- Do NOT hallucinate columns, tables, or joins
+- Do NOT add logic not present in the Query Decomposer JSON
+- Do NOT explain the query
+- Do NOT output markdown or commentary
+- Output ONLY the SQL query
 
-    - All non-aggregated columns in SELECT must be explicitly included in GROUP BY
+- All non-aggregated columns in SELECT must be explicitly included in GROUP BY
 
-    - Ensure all computed division denominators use NULLIF(column, 0) to prevent division-by-zero errors
+- Ensure all computed division denominators use NULLIF(column, 0) to prevent division-by-zero errors
 
-    - All percentage outputs must use ROUND() and be formatted using CONCAT(value, '%')
+- All percentage outputs must use ROUND() and be formatted using CONCAT(value, '%')
 
-    - If the user does not explicitly specify child or parent level, default all queries and aggregations to the parent entity level (VERY IMPORTANT)
+- If the user does not explicitly specify child or parent level, default all queries and aggregations to the parent entity level (VERY IMPORTANT)
 
-    - Follow structured logic: identify columns → filter → group → aggregate → sort/rank
+- Follow structured logic: identify columns → filter → group → aggregate → sort/rank
 
-    - Combine related calculations into one cohesive query
+- Combine related calculations into one cohesive query
 
-    - Keep queries readable using clear aliases
+- Keep queries readable using clear aliases
 
-    - Return only relevant, well-labeled results
+- Return only relevant, well-labeled results
 
-    ────────────────────────
-    SNOWFLAKE-SPECIFIC RULES (MANDATORY)
-    ────────────────────────
-    - Use DATEADD() for all date arithmetic
-    Example: DATEADD(WEEK, -12, date_column)
-
-    - NEVER use DATE_SUB or INTERVAL
-
-    - NEVER use backticks (`); use double quotes "alias" when needed
-
-    - Use CAST(... AS INTEGER) or ::INTEGER instead of SIGNED
-
-    - Use CASE WHEN instead of IF()
-
-    - Use CONCAT() for string concatenation
-
-    - Avoid MySQL-specific functions
+────────────────────────
+SNOWFLAKE-SPECIFIC RULES (MANDATORY)
+────────────────────────
+- Use DATEADD() for all date arithmetic
+  Example: DATEADD(WEEK, -12, date_column)
 
-    - Use CURRENT_DATE instead of CURDATE()
+- NEVER use DATE_SUB or INTERVAL
 
-    - Ensure type safety in numeric operations
+- NEVER use backticks (`); use double quotes "alias" when needed
 
-    - Avoid implicit casting
+- Use CAST(... AS INTEGER) or ::INTEGER instead of SIGNED
 
-    - Ensure CROSS JOIN does not introduce unintended duplication
+- Use CASE WHEN instead of IF()
 
-    - Keep date window logic consistent and explicit
+- Use CONCAT() for string concatenation
 
-    STRICT SQL RULES:
-    1. Every column in SELECT that is NOT inside an aggregate function MUST be present in the GROUP BY clause.
-    2. NEVER include columns in SELECT that are not grouped or aggregated.
-    3. When using aliases (e.g., W.column), ensure the same alias is used consistently in SELECT and GROUP BY.
-    4. Do NOT use implicit grouping — Snowflake requires explicit GROUP BY.
-    5. If a column is constant (e.g., from a CTE), still include it in GROUP BY if selected.
-    6. Prefer explicit GROUP BY column names over positional indexes.
+- Avoid MySQL-specific functions
 
-    AGGREGATION RULES:
-    7. If aggregation is used (COUNT, SUM, AVG, etc.), verify ALL non-aggregated fields are grouped.
-    8. Avoid mixing aggregated and non-aggregated columns incorrectly.
+- Use CURRENT_DATE instead of CURDATE()
 
-    VALIDATION BEFORE OUTPUT:
-    9. Double-check that the query will not produce:
-    - "not a valid group by expression"
-    - "column not in group by"
-    - ambiguous column errors
+- Ensure type safety in numeric operations
 
+- Avoid implicit casting
 
-    ────────────────────────
-    Metric & Output Handling Rules (Must Always Be Enforced):
-    ────────────────────────
+- Ensure CROSS JOIN does not introduce unintended duplication
 
-    Enrollment Table Rules:
-        
-        For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
-        For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
-        When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
-        When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
-        When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
-        New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
-        For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
-        Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
+- Keep date window logic consistent and explicit
 
-    Dispense Table Rules:    
+STRICT SQL RULES:
+1. Every column in SELECT that is NOT inside an aggregate function MUST be present in the GROUP BY clause.
+2. NEVER include columns in SELECT that are not grouped or aggregated.
+3. When using aliases (e.g., W.column), ensure the same alias is used consistently in SELECT and GROUP BY.
+4. Do NOT use implicit grouping — Snowflake requires explicit GROUP BY.
+5. If a column is constant (e.g., from a CTE), still include it in GROUP BY if selected.
+6. Prefer explicit GROUP BY column names over positional indexes.
 
-        Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
-        Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
-        
-    Cross Table Rules (ENROLLMENTS + Dispense):
+AGGREGATION RULES:
+7. If aggregation is used (COUNT, SUM, AVG, etc.), verify ALL non-aggregated fields are grouped.
+8. Avoid mixing aggregated and non-aggregated columns incorrectly.
 
-        Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
+VALIDATION BEFORE OUTPUT:
+9. Double-check that the query will not produce:
+   - "not a valid group by expression"
+   - "column not in group by"
+   - ambiguous column errors
 
-    Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
 
-        Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
-        Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-        Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.    
-        Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
-        
-    Cross Tables Rules (Dispense + SD_SHIPMENTS):
-        Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
-        Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
-        Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+   ────────────────────────
+Metric & Output Handling Rules (Must Always Be Enforced):
+────────────────────────
+
+Enrollment Table Rules:
+    
+    For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
+    For list enrollment queries always display the following fields in the output: hub_patient_id, transaction_date, npi, hcp_name, tier, parent_name, type_flag, status, region, area, territory. 
+    When the user query mentions discontinued patients or uses terms like 'discontinued', filter the dataset where status = 'Discontinued Patient'. When the user query mentions cancelled patients, on hold patients, or uses terms like 'cancelled', 'cancel', 'on hold', 'held', or 'paused', filter the dataset where status = 'On Hold (HCP Decision)'."
+    When calculating the number of HCPs or HCP adoption, always anchor to the npi column using COUNT(DISTINCT npi) to ensure unique HCP counts.
+    When a query involves calculating potential or marketing target, always use the marketing_target table as the denominator and the enrollments table as the numerator, computing the result as (enrollments metric / marketing_target metric) × 100 across any dimension unless explicitly told otherwise. by default consider SUM(number_of_treated_patients) as the denominator metric unless explicitly mentioned otherwise
+    New Activation Rule: An entity (HCP, account) is "newly activated" only if their first-ever activation date — across all historical data — falls within the reporting period. Activity alone during the period does not qualify.
+    For any query returning HCP-level records, always display **NPI, HCP Name, Tier, HCP Potential (`hcp_acro_treated_patients`), Number of Enrollments Brought, Region, Area, and Territory** unless the user explicitly requests a different set of fields.
+    Breadth = Number of Unique Prescribers/HCPs. Depth = Number of Enrollments ÷ Number of Unique Prescribers. Apply these definitions consistently whenever a query references prescriber or HCP breadth or depth.
+
+Dispense Table Rules:    
+
+    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
+    Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
+    
+Cross Table Rules (ENROLLMENTS + Dispense):
+
+    Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
+
+Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
+
+    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
+    Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
+    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.    
+    Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
+    
+Cross Tables Rules (Dispense + SD_SHIPMENTS):
+    Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
+    Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
+    Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+
+CALL_TABLE USAGE INSTRUCTIONS:
+    This table is the primary source for all queries related to calls, reach, call frequency, and effort.
+
+    Column Guidance:
+        For any query involving calls, call frequency, or call effort, filter channel to include only Face To Face, Phone, and Video — exclude Email by default.
+        Only include Email if:
+            The user explicitly asks to include it, or
+            The query involves grouping/breakdown by channel_type (e.g., "show calls by channel type"), in which case include all 4 values.
+
+        The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+            To filter for Territory-level data, set geo_type = 'Territory'.
+            To filter for Area-level data, set geo_type = 'Area'.
+        Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+
+Query Handling Rules:
+
+1. Calls / Effort:
+- Always use call_table.
+- Apply the requested time period and geography/tier filters.
+- Effort should be interpreted as total activity count (calls).
+
+
+3. Reach:
+- Reach = (distinct target hcp npi reached) / (distinct total target hcp npi).
+- Ensure non-target campuses are excluded from the numerator.
+
+    - Calculation logic by geography level:
+    - Territory:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'N'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per territory.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Territory-level data, set geo_type = 'Territory'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND territory (exact match on both fields) — this ensures an HCP counts as "reached" only under the territory they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per territory).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+    - Area:
+        Step 1 — Build target HCP universe:
+            - From marketing_target_table, filter sam_focus = 'Y'.
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per area.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            -The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
+                To filter for Area-level data, set geo_type = 'Area'.
+                Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND AREA (exact match on both fields) — this ensures an HCP counts as "reached" only under the area they're actually targeted in, and only if they satisfy the sam_focus/tier filters from Step 1.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per area).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
 
-    Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-        To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
-        
-    Default Rules:
-        If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
-        For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
-        Always accompany any growth metric or percentage value with the corresponding absolute volume value.
-        Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-        Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
-        Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
-        Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
-        Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    - POD:
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per pod.
 
-    Time period Rules:
-        LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
-        The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
-        If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
-        For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
-        Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
-        For any trend related quer anchor to year to date, and display by week metrics
-        When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
-        When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
-        Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
-        If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
-        All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
-        When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
-        When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND pod (exact match on both fields) — this ensures an HCP counts as "reached" only under the pod they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
 
-        max_week_end_date = MAX(week_end_date)
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per pod).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
 
-        The **current or recent period** is the period that contains max_week_end_date.
 
-        ---
+    - Region:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values, per region.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on BOTH hcp npi AND region (exact match on both fields) — this ensures an HCP counts as "reached" only under the region they're actually targeted in.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs, per region).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+
+    - Nation:
+
+        Step 1 — Build target HCP universe:
+            - Filter tier IN (1, 2, 3, 4).
+            - Result: set of target hcp npi values for nation.
+
+        Step 2 — Identify reached HCPs:
+            - From call_data table, filter records to the specified time period.
+            - Filter tier IN (1, 2, 3, 4).
+            - Join to the Step 1 filtered target HCP universe (NOT the raw marketing_target_table) on hcp npi.
+            - Count distinct hcp npi from this joined/filtered result = Reached HCPs.
+
+        Step 3 — Calculate Reach:
+            - Denominator: distinct count of hcp npi from Step 1 (Total Target HCPs).
+            - Numerator: distinct count of hcp npi from Step 2 (Reached HCPs).
+            - Reach = Numerator / Denominator.
+            - Exclude any hcp npi whose call was at a non-target campus from the numerator — a visit to an HCP at a campus outside the target list should not count as a reach.
+
+            Call Frequency:
+
+    Frequency = (total number of calls to reached target HCPs) / (distinct count of target HCP npi reached).
+    The denominator (unique targets reached) is calculated exactly as the numerator in the Reach calculation for the corresponding geography level — i.e., reuse that same joined/filtered "Reached HCPs" set.
+    The numerator (number of calls to target) is the total call count on that same joined/filtered "Reached HCPs" set (not all calls in the raw call_data table) — i.e., only calls belonging to hcp npi that made it into the reached set for that geography.
+    Apply the same channel filtering as call_table usage instructions: include only Face To Face, Phone, and Video by default; include Email only if explicitly requested or if breaking down by channel_type.
+    Geography logic (Territory / Area / POD / Region / Nation) is identical to Reach — same target universe construction (sam_focus, tier filters), same geo_type constraint on call_stamped_territory_area, same join keys (hcp npi + territory/area/pod/region as applicable), and same non-target campus exclusion.
+
+    Calculation logic by geography level:
 
-        CALENDAR PERIOD BOUNDARIES
+    Territory:
 
-        Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
+    Reached HCPs set = same as Reach → Territory, Step 2 (target universe from sam_focus = 'N', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Territory' and time period, on hcp npi + territory, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (rows in call_data, channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
 
-        Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
 
-        Use calendar logic:
+    Area:
 
-        Month start = first day of the month
-        Month end = last day of the month
+    Reached HCPs set = same as Reach → Area, Step 2 (target universe from sam_focus = 'Y', tier IN (1,2,3,4), joined to call_data filtered to geo_type = 'Area' and time period, on hcp npi + area, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
 
-        Quarter start = first day of the quarter
-        Quarter end = last day of the quarter
 
-        Year start = January 1
-        Year end = December 31
+    POD:
 
-        Dataset dates must **never define the start or end of a calendar period**.
+    Reached HCPs set = same as Reach → POD, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + pod, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
 
-        ---
 
-        PERIOD COMPLETENESS
+    Region:
 
-        A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
+    Reached HCPs set = same as Reach → Region, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi + region, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
 
-        Month is complete if:
 
-        max_week_end_date >= month_end_date
+    Nation:
 
-        Quarter is complete if:
+    Reached HCPs set = same as Reach → Nation, Step 2 (target universe tier IN (1,2,3,4), joined to call_data filtered to time period, on hcp npi, excluding non-target campus calls).
+    Denominator = distinct count of hcp npi in that Reached HCPs set.
+    Numerator = total count of calls (channel-filtered per above) belonging to that same Reached HCPs set.
+    Frequency = Numerator / Denominator.
 
-        max_week_end_date >= quarter_end_date
+Important Constraints:
+- All frequency, reach, and average calls metrics must be formatted to exactly one decimal place. Do not return whole numbers or more than one decimal.
+- Always apply identical filters (time period, geography/tier) across numerator and denominator.
 
-        Year is complete if:
-
-        max_week_end_date >= year_end_date
-
-        If:
-
-        max_week_end_date < calendar_period_end
-
-        then the period must be treated as **incomplete**.
-
-        Never determine completeness using the **number of weeks present in the data**.
-
-        ---
-
-        WEEK DEFINITION
-
-        Weeks are defined using **week_end_date** and span:
-
-        Saturday (week_end_date − 6 days) → Friday (week_end_date)
-
-        ---
-
-        CALCULATION ORDER (MANDATORY)
-
-        All calculations must follow this strict order:
-
-        For comparisons:
-        1. Identify requested time periods.
-        2. Determine calendar boundaries.
-        3. Check completeness using max_week_end_date.
-        - Make a decision based on period completness:
-        CASE 
-        WHEN pc.is_recent_period_complete = 1 
-        AND pc.is_previous_period_complete = 1
-        THEN total_growth
-        ELSE NULL
-        END AS total_growth (VERY IMPORTANT)
-        4. If both periods are complete → aggregate totals at period level and display total growth.
-        5. Perform the comparison.
-        For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
-
-        ---
-
-        Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
-
-    ────────────────────────
-    LOGIC TRANSLATION RULES
-    ────────────────────────
-    - Every filter in the JSON MUST appear in the WHERE clause
-    - Every aggregation MUST appear exactly as defined
-    - group_by fields MUST be applied exactly as specified
-    - order_by MUST be applied only if present
-    - limit MUST be applied only if present
-    - Subqueries defined in the JSON MUST be implemented as CTEs or inline subqueries
-    - "derived:max_date" MUST be implemented using a MAX(date_column) subquery
-    - Rolling windows MUST be calculated relative to the derived max date, never system date
-    - Never infer dates using CURRENT_DATE unless explicitly instructed
-
-    ────────────────────────
-    FEEDBACK HANDLING
-    ────────────────────────
-    If FEEDBACK is provided:
-    - Fix ONLY the issues explicitly mentioned
-    - Do NOT introduce new logic
-    - Do NOT remove correct logic
-    - Preserve the structure implied by the Query Decomposer
-
-    ────────────────────────
-    FINAL OUTPUT REQUIREMENT
-    ────────────────────────
-    Output ONLY the final MySQL SELECT query.
-    No explanations.
-    No comments.
-    No additional text.
-
-    ────────────────────────
-        QUERY DECOMPOSITION
-    ────────────────────────
-    {query_decomposer_output}
-
-
-    TABLE SCHEMA:
-
-    Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-    - payer_name (VARCHAR): payer or insurance provider name
-    - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - hcp_name (VARCHAR): healthcare provider name
-    - status (VARCHAR): enrollment or patient status
-    - enrollment_source (VARCHAR): source/channel of enrollment
-    - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-    - primary_speciality (VARCHAR): primary medical specialty of HCP
-    - parent_name (VARCHAR): parent account or organization name
-    - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-    - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-    - state (VARCHAR): HCP or account state
-    - zip (NUMBER): ZIP/postal code
-    - region (VARCHAR): sales or operational region
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): sales territory name
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - hub_patient_id (VARCHAR): unique patient ID from hub system
-    - hcp_address (VARCHAR): healthcare provider address
-    - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - managing_entity (VARCHAR): entity responsible for patient/account management
-    - reason (VARCHAR): reason associated with enrollment or status
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-    - latest_dispensed_date (DATE): most recent dispense date
-    - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-    - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-    - last_call_date_hcp (DATE): most recent HCP call date
-    - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-    - parent_id (VARCHAR): parent account identifier
-    - child_id (VARCHAR): child/sub-account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-    - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
-
-    Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
-
-    - npi (NUMBER): National Provider Identifier (HCP unique ID).
-    - hcp_name (VARCHAR): Healthcare provider name.
-    - region (VARCHAR): Sales or operational region.
-    - territory (VARCHAR): Sales territory name.
-    - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-    - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-    - child_name (VARCHAR): Name of the child account, facility, or campus.
-    - parent_state (VARCHAR): State in which the parent account is located.
-    - child_state (VARCHAR): State in which the child account is located.
-    - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-    Table SD_SHIPMENTS - Shipments from Specialty Distributor
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - parent_id (VARCHAR): parent account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-    - number_of_bottles (NUMBER): number of bottles dispensed
-    - dosage (VARCHAR): (values: 40 mg, 60 mg)
-    - address (VARCHAR): Parent Account Address
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-
-    Table Dispense - Drug Dispense Data
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-    - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-    - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-
-        {sql_generator_rag_examples_text}
-
-        """
+
+Interpretation Rules:
+- "Coverage" → reach
+- If ambiguous, default to call-based interpretation and state assumption.
+
+Default Rules:
+    If the user does not explicitly specify a total sales denominator, assume overall national sales as the default denominator.
+    For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
+    Always accompany any growth metric or percentage value with the corresponding absolute volume value.
+    Whenever the query references “nation,” compute the national-level metrics and include them in the output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
+    Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
+    Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
+    
+
+Time period Rules:
+    LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
+    If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
+    For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
+    Time windows: R13W = Recent 13 Weeks, P13W = Prior 13 Weeks, R12M (Recent 12 Months) and P12M (Prior 12 Months) must be calculated using a rolling 52-week period.
+    For any trend related quer anchor to year to date, and display by week metrics
+    When the user query or default time period references "LTD" (till now / so far / to date / up to now / cumulative / overall), interpret it as Launch to Date — spanning from MIN(transaction_date) to MAX(transaction_date). Filter the dataset to include all records within this range.
+    When the user query contains phrases like 'this year', 'current year', 'year to date', or 'YTD' — or when the default time period is set to YTD — apply the following rules strictly: (1) Year Filter: Always filter the dataset to include only records where year = MAX(year). This is the current year for all YTD calculations. Never use any other year value. (2) Date Range for YTD: The YTD period always spans from January 1st of MAX(year) to the latest available date within MAX(year). Start date is YYYY-01-01 where YYYY = MAX(year), and end date is MAX(date) where year = MAX(year). (3) Week-Level Calculations under YTD: When breaking down YTD data by week, always begin from Week 1 where Week 1 start date is set to YYYY-01-01 where YYYY = MAX(year). All weeks must satisfy both conditions: week_start_date >= YYYY-01-01 AND year = MAX(year). Never roll back into Week 52/53 of the previous year even if ISO week numbering places early January dates there. If using ISO weeks, apply year = MAX(year) filter first, then override the first week's start date to YYYY-01-01 if the ISO week start falls in the prior year. (4) Strict Year Boundary: For any time-period calculation under YTD — whether daily, weekly, monthly, or quarterly — the condition year = MAX(year) is mandatory and must be applied before any other time grouping. No record from a prior year should appear in a YTD result regardless of how week or period boundaries are computed.
+    Whenever any time period is involved (including but not limited to weekly averages), the output must explicitly include the time period boundaries, i.e., the start date and end date (e.g., week_start_date and week_end_date). (VERY IMPORTANT)
+    If the user asks for growth without specifying a timeframe, compute growth as Recent 3 Weeks (R3W) vs Prior 3 Weeks (P3W).
+    All output metrics must include the time window in their label (e.g., enrollments_4w, enrollments_52w, enrollments_12m).
+    When the aggregation is based on a specific time granularity, the metric name should reflect it explicitly (e.g., weekly_enrollments, monthly_enrollments, quarterly_enrollments, yearly_enrollments) and should not include an additional time window prefix or suffix.
+    When the user refers to **current, recent, last, or previous** month, quarter, or year, first determine the most recent available date using:
+
+    max_week_end_date = MAX(week_end_date)
+
+    The **current or recent period** is the period that contains max_week_end_date.
+
+    ---
+
+    CALENDAR PERIOD BOUNDARIES
+
+    Time period boundaries must always be determined using the **calendar definition of the period**, not from the dataset.
+
+    Do not use MIN(transaction_date) or MAX(transaction_date) from the dataset to determine period_start or period_end.
+
+    Use calendar logic:
+
+    Month start = first day of the month
+    Month end = last day of the month
+
+    Quarter start = first day of the quarter
+    Quarter end = last day of the quarter
+
+    Year start = January 1
+    Year end = December 31
+
+    Dataset dates must **never define the start or end of a calendar period**.
+
+    ---
+
+    PERIOD COMPLETENESS
+
+    A period is considered **complete only if the dataset contains data up to the calendar end of that period**.
+
+    Month is complete if:
+
+    max_week_end_date >= month_end_date
+
+    Quarter is complete if:
+
+    max_week_end_date >= quarter_end_date
+
+    Year is complete if:
+
+    max_week_end_date >= year_end_date
+
+    If:
+
+    max_week_end_date < calendar_period_end
+
+    then the period must be treated as **incomplete**.
+
+    Never determine completeness using the **number of weeks present in the data**.
+
+    ---
+
+    WEEK DEFINITION
+
+    Weeks are defined using **week_end_date** and span:
+
+    Saturday (week_end_date − 6 days) → Friday (week_end_date)
+
+    ---
+
+    CALCULATION ORDER (MANDATORY)
+
+    All calculations must follow this strict order:
+
+    For comparisons:
+    1. Identify requested time periods.
+    2. Determine calendar boundaries.
+    3. Check completeness using max_week_end_date.
+    - Make a decision based on period completness:
+    CASE 
+    WHEN pc.is_recent_period_complete = 1 
+    AND pc.is_previous_period_complete = 1
+    THEN total_growth
+    ELSE NULL
+    END AS total_growth (VERY IMPORTANT)
+    4. If both periods are complete → aggregate totals at period level and display total growth.
+    5. Perform the comparison.
+    For month/quarter queries, anchor to `month_year` and `quarter_year` respectively.
+
+    ---
+
+    Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
+
+────────────────────────
+LOGIC TRANSLATION RULES
+────────────────────────
+- Every filter in the JSON MUST appear in the WHERE clause
+- Every aggregation MUST appear exactly as defined
+- group_by fields MUST be applied exactly as specified
+- order_by MUST be applied only if present
+- limit MUST be applied only if present
+- Subqueries defined in the JSON MUST be implemented as CTEs or inline subqueries
+- "derived:max_date" MUST be implemented using a MAX(date_column) subquery
+- Rolling windows MUST be calculated relative to the derived max date, never system date
+- Never infer dates using CURRENT_DATE unless explicitly instructed
+
+────────────────────────
+FEEDBACK HANDLING
+────────────────────────
+If FEEDBACK is provided:
+- Fix ONLY the issues explicitly mentioned
+- Do NOT introduce new logic
+- Do NOT remove correct logic
+- Preserve the structure implied by the Query Decomposer
+
+────────────────────────
+FINAL OUTPUT REQUIREMENT
+────────────────────────
+Output ONLY the final MySQL SELECT query.
+No explanations.
+No comments.
+No additional text.
+
+────────────────────────
+    QUERY DECOMPOSITION
+────────────────────────
+{query_decomposer_output}
+
+
+TABLE SCHEMA:
+
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+
+Table: marketting_target — Prioritized target HCp's for strategic commercial focus.
+
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
+
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+
+
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
+
+
+    {sql_generator_rag_examples_text}
+
+    """
 
     response = model_1.invoke(prompt).content[0]["text"]
     print("SQL Generator Response")
@@ -2158,219 +2792,240 @@ def sql_reviewer_node(state: AgentState):
     query_decomposition=state["query_decomposer_output"]
     human_feedback = state.get("human_reviewer_output") or None
     prompt=f"""
-    You are an expert SQL reviewer for Snowflake SQL.
+You are an expert SQL reviewer for Snowflake SQL.
 
-    Your role is to VALIDATE correctness, safety, and logical consistency of a generated SQL query.
-    You are NOT a SQL generator.
-    You must understand analytical intent, including rolling windows and derived dates.
+Your role is to VALIDATE correctness, safety, and logical consistency of a generated SQL query.
+You are NOT a SQL generator.
+You must understand analytical intent, including rolling windows and derived dates.
 
-    ────────────────────────
-    OUTPUT RESTRICTION (MANDATORY)
-    ────────────────────────
+────────────────────────
+OUTPUT RESTRICTION (MANDATORY)
+────────────────────────
 
-    You must NEVER write, regenerate, or rewrite SQL (even partially).
+You must NEVER write, regenerate, or rewrite SQL (even partially).
 
-    You must NEVER propose an alternative SQL query.
+You must NEVER propose an alternative SQL query.
 
-    If the SQL is wrong, only state the exact issue(s) causing rejection.
+If the SQL is wrong, only state the exact issue(s) causing rejection.
 
-    ────────────────────────
-    WHAT YOU MUST CHECK
-    ────────────────────────
+────────────────────────
+WHAT YOU MUST CHECK
+────────────────────────
 
-    Reject the SQL ONLY if one or more of the following are true:
+Reject the SQL ONLY if one or more of the following are true:
 
-    ❌ The query uses forbidden statements:
-    DELETE, UPDATE, INSERT, DROP, ALTER, TRUNCATE
+❌ The query uses forbidden statements:
+DELETE, UPDATE, INSERT, DROP, ALTER, TRUNCATE
 
-    ❌ The query references:
-    Tables not listed in the schema
-    Columns not listed in the schema
+❌ The query references:
+Tables not listed in the schema
+Columns not listed in the schema
 
-    ❌ The SQL contains invalid Snowflake SQL syntax
+❌ The SQL contains invalid Snowflake SQL syntax
 
-    ────────────────────────
-    WHAT IS EXPLICITLY ALLOWED
-    ────────────────────────
+────────────────────────
+WHAT IS EXPLICITLY ALLOWED
+────────────────────────
 
-    You MUST allow the following patterns if used correctly:
+You MUST allow the following patterns if used correctly:
 
-    ✔ Common Table Expressions (WITH clauses)
-    ✔ Subqueries in SELECT / WHERE / FROM
-    ✔ Derived-date logic using:
-    MAX(date_column)
+✔ Common Table Expressions (WITH clauses)
+✔ Subqueries in SELECT / WHERE / FROM
+✔ Derived-date logic using:
+MAX(date_column)
 
-    ✔ Date functions such as:
-    DATEADD, DATEDIFF
+✔ Date functions such as:
+DATEADD, DATEDIFF
 
-    ✔ Rolling window calculations (e.g., last 13 weeks)
-    ✔ Aggregations (SUM, COUNT, AVG)
-    ✔ ORDER BY and LIMIT
-    ✔ Aliases
-    ✔ Nested queries
-    ✔ Filtering using derived values
+✔ Rolling window calculations (e.g., last 13 weeks)
+✔ Aggregations (SUM, COUNT, AVG)
+✔ ORDER BY and LIMIT
+✔ Aliases
+✔ Nested queries
+✔ Filtering using derived values
 
-    Do NOT reject a query just because it is complex.
+Do NOT reject a query just because it is complex.
 
-    ────────────────────────
-    IMPORTANT CLARIFICATIONS
-    ────────────────────────
+────────────────────────
+IMPORTANT CLARIFICATIONS
+────────────────────────
 
-    • Example values in the schema are ILLUSTRATIVE ONLY and must NEVER be used to reject SQL.
-    • “Original values” listed in the schema are NOT exhaustive and must NEVER be used to reject SQL.
-    • Do NOT validate whether literal filter values exist in the dataset (out of scope).
+• Example values in the schema are ILLUSTRATIVE ONLY and must NEVER be used to reject SQL.
+• “Original values” listed in the schema are NOT exhaustive and must NEVER be used to reject SQL.
+• Do NOT validate whether literal filter values exist in the dataset (out of scope).
 
-    • Queries using MAX(date_column) instead of system date
-    are PREFERRED for “latest / most recent” questions
+• Queries using MAX(date_column) instead of system date
+are PREFERRED for “latest / most recent” questions
 
-    • Rolling windows must be evaluated relative to the data
-    → Using MAX(week_end_date) is VALID and CORRECT
+• Rolling windows must be evaluated relative to the data
+→ Using MAX(week_end_date) is VALID and CORRECT
 
-    • Subqueries and CTEs do NOT require rejection unless syntactically invalid
+• Subqueries and CTEs do NOT require rejection unless syntactically invalid
 
-    • Do NOT reject a query because it is not optimal or not written in the same style as examples.
-    Only reject for correctness, safety, schema mismatch, syntax errors, or explicit intent mismatch.
+• Do NOT reject a query because it is not optimal or not written in the same style as examples.
+Only reject for correctness, safety, schema mismatch, syntax errors, or explicit intent mismatch.
 
-    If the user does not explicitly specify campus or parent level, default all queries and aggregations to the campus entity level. (VERY IMPORTANT)
+If the user does not explicitly specify campus or parent level, default all queries and aggregations to the campus entity level. (VERY IMPORTANT)
 
-    month_year and quarter_year are columns present in both data_867 and data_DDD.
+month_year and quarter_year are columns present in both data_867 and data_DDD.
 
-    ────────────────────────
-    INPUT CONTEXT
-    ────────────────────────
+────────────────────────
+INPUT CONTEXT
+────────────────────────
 
-    Consider the current month as: {CURRENT_MONTH}
-    Consider the current quarter as: {CURRENT_QUARTER}
+Consider the current month as: {CURRENT_MONTH}
+Consider the current quarter as: {CURRENT_QUARTER}
 
-    USER QUERY
-    ────────────────────────
-    {user_input}
-    ────────────────────────
+USER QUERY
+────────────────────────
+{user_input}
+────────────────────────
 
-    Genrated SQL (IMPORTANT)
-    ────────────────────────
-    {generated_sql}
-    ────────────────────────
-    Query decomposition (for reference):
-    {query_decomposition}
+Genrated SQL (IMPORTANT)
+────────────────────────
+{generated_sql}
+────────────────────────
+Query decomposition (for reference):
+{query_decomposition}
 
-    Human feedback (if any):
-    {human_feedback}
-    If human feedback is provided, treat it as a strict constraint and prioritize it during evaluation.
+Human feedback (if any):
+{human_feedback}
+If human feedback is provided, treat it as a strict constraint and prioritize it during evaluation.
 
-    TABLE SCHEMA:
+TABLE SCHEMA:
 
-    Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-    - payer_name (VARCHAR): payer or insurance provider name
-    - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - hcp_name (VARCHAR): healthcare provider name
-    - status (VARCHAR): enrollment or patient status
-    - enrollment_source (VARCHAR): source/channel of enrollment
-    - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-    - primary_speciality (VARCHAR): primary medical specialty of HCP
-    - parent_name (VARCHAR): parent account or organization name
-    - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-    - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-    - state (VARCHAR): HCP or account state
-    - zip (NUMBER): ZIP/postal code
-    - region (VARCHAR): sales or operational region
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): sales territory name
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - hub_patient_id (VARCHAR): unique patient ID from hub system
-    - hcp_address (VARCHAR): healthcare provider address
-    - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - managing_entity (VARCHAR): entity responsible for patient/account management
-    - reason (VARCHAR): reason associated with enrollment or status
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-    - latest_dispensed_date (DATE): most recent dispense date
-    - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-    - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-    - last_call_date_hcp (DATE): most recent HCP call date
-    - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-    - parent_id (VARCHAR): parent account identifier
-    - child_id (VARCHAR): child/sub-account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-    - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-    Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
+Table: marketting_target — Prioritized target HCp's for strategic commercial focus.
 
-    - npi (NUMBER): National Provider Identifier (HCP unique ID).
-    - hcp_name (VARCHAR): Healthcare provider name.
-    - region (VARCHAR): Sales or operational region.
-    - territory (VARCHAR): Sales territory name.
-    - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-    - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-    - child_name (VARCHAR): Name of the child account, facility, or campus.
-    - parent_state (VARCHAR): State in which the parent account is located.
-    - child_state (VARCHAR): State in which the child account is located.
-    - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
-    Table SD_SHIPMENTS - Shipments from Specialty Distributor
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - parent_id (VARCHAR): parent account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-    - number_of_bottles (NUMBER): number of bottles dispensed
-    - dosage (VARCHAR): (values: 40 mg, 60 mg)
-    - address (VARCHAR): Parent Account Address
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
 
-    Table Dispense - Drug Dispense Data
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-    - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-    - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-    ────────────────────────
-    RESPONSE FORMAT (STRICT)
-    ────────────────────────
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
 
-    Respond ONLY in this format, with no extra text:
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
 
-    PASS or REJECT
-    FEEDBACK:
+────────────────────────
+RESPONSE FORMAT (STRICT)
+────────────────────────
 
-    If REJECT: list the exact technical or logical issues
+Respond ONLY in this format, with no extra text:
 
-    If PASS: say exactly → "PASS, SQL is safe and valid"
+PASS or REJECT
+FEEDBACK:
 
-    Do NOT provide suggestions, rewrites, or explanations.
-    Do NOT output SQL.
-    Do NOT reject queries that correctly implement analytical intent.
-    """
+If REJECT: list the exact technical or logical issues
+
+If PASS: say exactly → "PASS, SQL is safe and valid"
+
+Do NOT provide suggestions, rewrites, or explanations.
+Do NOT output SQL.
+Do NOT reject queries that correctly implement analytical intent.
+"""
     response=model.invoke(prompt).content
     print("SQL Reviewer Output")
     print("-"*100)
@@ -2433,7 +3088,6 @@ def reviewer_router(state: AgentState):
     if "PASS" in output:
         return "sql_executor"
     return "query_decomposer"
-
 def human_router(state: AgentState):
     output = state["last_output"].upper()
 
@@ -3026,102 +3680,102 @@ def summarizer_node(state: AgentState):
 
         TABLE SCHEMA:
 
-        Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-        - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-        - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-        - payer_name (VARCHAR): payer or insurance provider name
-        - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-        - npi (NUMBER): National Provider Identifier (HCP unique ID)
-        - hcp_name (VARCHAR): healthcare provider name
-        - status (VARCHAR): enrollment or patient status
-        - enrollment_source (VARCHAR): source/channel of enrollment
-        - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-        - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-        - primary_speciality (VARCHAR): primary medical specialty of HCP
-        - parent_name (VARCHAR): parent account or organization name
-        - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-        - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-        - state (VARCHAR): HCP or account state
-        - zip (NUMBER): ZIP/postal code
-        - region (VARCHAR): sales or operational region
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): sales territory name
-        - crinetics_id (VARCHAR): internal Crinetics identifier
-        - hub_patient_id (VARCHAR): unique patient ID from hub system
-        - hcp_address (VARCHAR): healthcare provider address
-        - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - managing_entity (VARCHAR): entity responsible for patient/account management
-        - reason (VARCHAR): reason associated with enrollment or status
-        - bottles_dispensed (NUMBER): number of bottles dispensed
-        - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-        - latest_dispensed_date (DATE): most recent dispense date
-        - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-        - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-        - last_call_date_hcp (DATE): most recent HCP call date
-        - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-        - parent_id (VARCHAR): parent account identifier
-        - child_id (VARCHAR): child/sub-account identifier
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - year (VARCHAR): year label  (e.g., 2025)
-        - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-        - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-        Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
+Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
 
-        - npi (NUMBER): National Provider Identifier (HCP unique ID).
-        - hcp_name (VARCHAR): Healthcare provider name.
-        - region (VARCHAR): Sales or operational region.
-        - territory (VARCHAR): Sales territory name.
-        - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-        - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-        - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-        - parent_name (VARCHAR): Name of the parent account or health system.
-        - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-        - child_name (VARCHAR): Name of the child account, facility, or campus.
-        - parent_state (VARCHAR): State in which the parent account is located.
-        - child_state (VARCHAR): State in which the child account is located.
-        - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-        - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
-        Table SD_SHIPMENTS - Shipments from Specialty Distributor
-        - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-        - parent_name (VARCHAR): Name of the parent account or health system.
-        - parent_id (VARCHAR): parent account identifier
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - year (VARCHAR): year label  (e.g., 2025)
-        - region (VARCHAR): Sales or operational region.
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): Sales territory name.
-        - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-        - number_of_bottles (NUMBER): number of bottles dispensed
-        - dosage (VARCHAR): (values: 40 mg, 60 mg)
-        - address (VARCHAR): Parent Account Address
-        - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
 
-        Table Dispense - Drug Dispense Data
-        - crinetics_id (VARCHAR): internal Crinetics identifier
-        - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-        - bottles_dispensed (NUMBER): number of bottles dispensed
-        - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-        - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-        - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-        - region (VARCHAR): Sales or operational region.
-        - area (VARCHAR): sales area/division
-        - territory (VARCHAR): Sales territory name.
-        - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-        - npi (NUMBER): National Provider Identifier (HCP unique ID)
-        - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-        - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-        - month_year (VARCHAR): month label (e.g., 2025-01)
-        - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-        - year (VARCHAR): year label  (e.g., 2025)
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
 
-            """
+    """
     response=model.invoke(prompt).content
     print("Masked Summary")
     print(response)
@@ -3154,475 +3808,475 @@ def visualization_node(state: AgentState):
 
     #result_summary=state["result_summary"]
     prompt=f"""
-    You are a Visualization Agent.
-    
-    Your goal is to create a meaningful, accurate, and non-misleading Plotly visualization ONLY when the data supports it.
-    
-    You MUST prioritize correctness over forcing a chart.
-    
-    ---
-    
-    ## INPUTS
-    
-    User Query:
-    {user_query}
-    
-    Query Decomposer Output:
-    {query_decomposer_output}
-    
-    SQL Generator Output:
-    {sql_generator_output}
-    
-    SQL Executor Output:
-    {result_df}
-    
-    SQL Executor Output Descriptive Stats:
-    {descriptive_stats}
-    
-    SUMMARY-DRIVEN VISUALIZATION RULE — METRIC PRIORITIZATION
-    {summary}
-    
-    Before writing any Plotly code, parse the entire summary and extract every metric, KPI, figure, percentage, trend, and named entity from the Findings, Key Takeaways, and Opportunities sections. This extracted list is your visualization brief — it overrides all default data-driven decisions. If the data has 50 columns but the summary mentions 6 metrics, visualize those 6 only.
-    
-    METRIC HIERARCHY IN CODE:
-    - Findings → primary Y-axis and dominant visual elements (tallest bars, main lines)
-    - Key Takeaways → reference lines and direct annotations on the chart — never buried in tooltips
-    - Opportunities → gap overlays, delta annotations, or target markers in a visually distinct color — always showing the gap between current state and potential, not just raw numbers
-    
-    HARD RULES:
-    1. If a Finding and an Opportunity reference the same entity, they MUST appear on the same chart so the gap is immediately visible
-    2. Every metric name on axes, hovers, and annotations must match the summary word-for-word ("Net Revenue" stays "Net Revenue" — never "Sales" or "Revenue")
-    3. Every figure, percentage, and named comparison from the summary MUST appear somewhere in the visualization — as a bar, line, reference line, annotation, or hover value. A metric present in the summary but absent from the chart is a bug
-    4. Before finalizing the code, audit every bullet in Findings, Key Takeaways, and Opportunities and confirm each one has a visual representation. Only return code when all metrics are accounted for
-    
-    Assume the SQL output will be reconstructed into a Pandas DataFrame named df.
-    
-    ---
-    
-    ## CORE DECISION LOGIC (MANDATORY)
-    
-    Before generating a chart, you MUST:
-    
-    1. Identify column types:
-    
-    * Numeric columns
-    * Categorical columns
-    * Datetime or ordered columns
-    
-    2. Determine analytical intent:
-    
-    * Trend → requires datetime or ordered column
-    * Comparison → categorical vs numeric
-    * Distribution → single numeric column
-    * Ranking → categorical + numeric
-    * Relationship → at least two numeric columns
-    
-    3. Validate if visualization is appropriate:
-    
-    * If only 1 column → NO_VISUALIZATION
-    * If all columns are categorical → NO_VISUALIZATION
-    * If data is too small, ambiguous, or lacks structure → NO_VISUALIZATION
-    * If visualization would be misleading → NO_VISUALIZATION
-    
-    4. Time Axis Rule: Use the dataset's exact time granularity (week/month/quarter) for the X-axis—no transformations or mixing.
-    ---
-    
-    ## ENHANCED INTENT DETECTION (ADDED)
-    
-    In addition to the above, refine intent using semantic signals from the question:
-    
-    * Trend Analysis:
-    Keywords → "trend", "over time", "evolution", "recent", "momentum"
-    
-    * Regional / Segment Comparison:
-    Keywords → "across regions", "by tier", "comparison"
-    
-    * Contribution / Drivers:
-    Keywords → "driving", "contribution", "dependent", "share of"
-    
-    * Consistency / Variability:
-    Keywords → "consistent", "variability", "spread"
-    
-    * Adoption / Funnel / Health:
-    Keywords → "adoption", "funnel", "health", "status", "conversion"
-    
-    * Market Share:
-    Keywords → "market share", "gaining share", "losing share"
-    
-    * Competitive Comparison:
-    Keywords → multiple entities (e.g., relmora vs zynava)
-    
-    * Multi-dimensional:
-    Keywords → combinations like "region and tier"
-    
-    ---
-    
-    ## CHART SELECTION RULES (STRICT)
-    
-    * Line Chart:
-    Use ONLY if a datetime or ordered column exists
-    
-    * Bar Chart:
-    Use for categorical vs numeric comparisons
-    
-    * Scatter Plot:
-    Use ONLY if at least 2 numeric columns exist
-    
-    * Histogram:
-    Use for distribution of a single numeric column
-    
-    * Pie Chart:
-    Use ONLY if:
-    
-    * ≤ 6 categories
-    * Represents part-to-whole relationship
-    * PREFERRED over bar chart when showing tier-wise or segment-wise distribution as a share of total (e.g., "tier distribution", "segment breakdown", "% share by tier")
-    
-    * Flat/tabular outputs with no clear analytical mapping:
-    Return NO_VISUALIZATION
-    
-    * If multiple chart types are possible:
-    Choose the simplest and most interpretable one
-    
-    ---
-    
-    ## ADVANCED CHART OVERRIDES (ADDED - HIGH PRIORITY)
-    
-    These rules OVERRIDE basic rules when applicable:
-    
-    1. Trend + Multiple Categories:
-    → Use MULTI-LINE chart (color by category)
-    
-    2. Contribution / Share:
-    → Prefer STACKED BAR
-    → If time present → STACKED AREA
-    
-    3. Market Share:
-    → ALWAYS convert to percentage if possible
-    → Use:
-    
-    * STACKED AREA (time)
-    * 100% STACKED BAR (snapshot)
-    
-    4. Performance vs Target:
-    → Prefer grouped bar (actual vs target)
-    → If unclear → fallback to bar chart
-    
-    5. Multi-dimensional (2 categorical variables):
-    → Prefer HEATMAP (if dense data)
-    → Else GROUPED BAR
-    
-    6. Adoption / Health Categories:
-    → STACKED BAR (if categorical states exist)
-    
-    7. Consistency / Variability:
-    → If enough data → BOX PLOT
-    → Else fallback to bar/line
-    
-    8. Tier-wise or Segment Distribution (part-to-whole, no time axis):
-    → ALWAYS use PIE CHART when ≤ 6 segments and the intent is "what share does each segment represent"
-    → Show percentage labels directly on slices, not just in hover
-    
-    9. Cross-entity Distribution Comparison (e.g., relmora vs zynava tier-wise):
-    → ALWAYS use percentage proportions (%) not absolute values (mg) on the Y-axis
-    → Use GROUPED BAR with percentage labels so the comparison is meaningful across entities with different total volumes
-    
-    ---
-    
-    ## GROWTH RULE (VERY IMPORTANT)
-    
-    If any growth-related column exists (growth, %, change, WoW, MoM, QoQ, YoY):
-    
-    * You MUST include BOTH:
-    
-    * Base metric (bar or line)
-    * Growth metric (secondary axis)
-    
-    * Use make_subplots with secondary_y=True
-    
-    * DO NOT mix axis strategies:
-    
-    * If using secondary_y=True → use make_subplots ONLY
-    * NEVER manually assign yaxis='y2'
-    
-    ---
-    
-    ## METRIC FIDELITY RULE (CRITICAL — NEW)
-    
-    The chart MUST display exactly the metric the user asked for — never substitute a different metric even if it is available in the data:
-    
-    * If the user asked for "average calls per day" → plot avg_calls_per_day, NOT total_calls
-    * If the user asked for "daily average sales" → plot daily_avg_sales, NOT total_sales
-    * If the user asked for "% market share" → plot percentage share, NOT absolute mg
-    * If both total and average are available and the user asked for average → use average as the primary Y-axis; total may appear as a secondary trace only if it adds context
-    * Before finalizing, re-read the user query and confirm every Y-axis value matches the requested metric exactly
-    
-    ---
-    
-    ## COLUMN USAGE RULES
-    
-    * Use ONLY columns present in df
-    
-    * NEVER invent or infer missing columns
-    
-    * Preferred mappings:
-    
-    * x → categorical or datetime column
-    * y → numeric column(s)
-    
-    ---
-    
-    ## VISUAL ENHANCEMENT RULES (ADDED)
-    
-    When generating charts, apply:
-    
-    * Sort categorical axes in descending order (for comparison charts)
-    * Highlight latest time point (for trend charts)
-    * Limit categories to top 10 if too many values
-    * Use consistent color grouping for categories
-    * Avoid clutter and over-plotting
-    * Ensure readability over aesthetics
-    * CRITICAL RULE: Always display geography/region names instead of geography or region IDs in visualizations.
-    * All visualizations must display visible data labels for every data point.
-    * For pie charts: always show both the category label and the percentage value directly on each slice using textinfo="label+percent".
-    
-    ---
-    
-    ## SPECIAL HANDLING RULES
-    
-    * Growth queries:
-    → Always prioritize showing trend + growth together
-    
-    * Recent period queries:
-    → Focus on latest available time window
-    
-    * Regional queries:
-    → Ensure comparisons are clearly distinguishable
-    
-    * Market share queries:
-    → Prefer percentage representation over absolute values
-    
-    * Multi-level queries:
-    → Prefer grouped or heatmap visualization
-    
-    * Growth Questions (Single-Row Output)
-    → If the question is about growth and the output has only 1 row: always render a bar chart. Show bars for the previous and current period using whichever metrics are available — prefer both total growth and daily average growth side by side; fall back to daily average growth alone if total is absent. Never skip the chart.
-    
-    ---
-    
-    ## PLOTLY RULES (MANDATORY)
-    
-    * Use Plotly only (plotly.express or plotly.graph_objects)
-    * Output ONLY valid Python code defining `fig`
-    * No explanations, no comments, no markdown
-    * No Streamlit code
-    
-    ---
-    
-    ## LAYOUT / WIDTH RULE (CRITICAL)
-    
-    * Plotly `width` MUST be a numeric value (e.g., 600, 800, 1000)
-    * NEVER use 'stretch' or 'content' inside fig.update_layout()
-    * NEVER use `use_container_width`
-    * The rendering layer (e.g., Streamlit) will handle container sizing
-    
-    ---
-    
-    ## HOVERTEMPLATE RULES (MANDATORY)
-    
-    * NEVER use Python `%` string formatting
-    * ALWAYS use f-strings
-    * Preserve Plotly placeholders like `%{{x}}`, `%{{y}}`
-    * Escape placeholders in f-strings:
-    Example: f"Region=%{{x}}<br>Value=%{{y}}"
-    * Do NOT mix `%` formatting with Plotly placeholders
-    * Every value representing growth, rate, or percentage MUST include the '%' symbol—no exceptions, no alternative formats.
-    ---
-    
-    PLOTLY VISUALIZATION RULES — ALWAYS ENFORCE ALL:
-    
-    RULE 1 — PERIOD COMPARISONS: Never display a chart that only compares the number of days between a current period and a previous period. Every period comparison MUST always include all three metrics: total volume sales, daily average sales, and growth change (%).
-    
-    RULE 2 — NO IDS ON CHARTS: Never display raw ID fields anywhere on a chart — no axes, labels, legends, hovers, or titles. This includes campus_id, campus_region_id, campus_territory_id, and parent_id. Always resolve to their human-readable name fields before plotting: campus_account_name, campus_region, campus_territory, parent_account_name. If a name is unavailable, show "Unknown" — never fall back to the numeric ID.
-    
-    RULE 3 — NO HH:MM:SS TIMESTAMPS: Never render timestamps in HH:MM:SS format on any axis, tick, label, or hover. Always strip time components when only the date is meaningful. Use human-readable date formats appropriate to the data granularity (e.g. "Jan 2024", "Q1 2024", "12 May"). Use Plotly's tickformat or pre-format the date column before plotting.
-    Implementation: Before plotting, convert date columns with:
-        df['date'] = pd.to_datetime(df['date']).dt.strftime('%b %Y')   # for monthly
-        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d %b %Y')  # for daily
-    AND set fig.update_xaxes(tickformat="%b %Y") as a backup.
-    
-    RULE 4 — NO OVERLAPPING DATA LABELS: On any chart combining bar and line traces, data labels must never overlap each other or any other chart element. Always set textposition="outside" for bar labels, increase layout.height for dense data, set cliponaxis=False, and add sufficient layout.margin.t so that labels above the highest bar are never clipped or collide with adjacent labels.
-    Additional enforcement:
-        - For multi-line charts with many data points: alternate label positions ("top center" and "bottom center") by trace so labels from different series never collide
-        - Set a minimum chart height of 500px; increase to 650px+ when 3 or more traces share the same x-axis range
-        - For bar+line combo charts: always offset bar labels (textposition="outside") and line labels (textposition="top center") with a minimum vertical gap of 15px between any two labels
-    
-    RULE 5 — HOVER TOOLTIPS MUST BE FULLY VISIBLE: Hover tooltips must never be partially cut off by the chart boundary, browser edge, or any container. Always set generous layout margins on all sides (minimum 60px), use hoverlabel=dict(namelength=-1) to prevent label truncation, set layout.hovermode="closest", and never place the chart inside a container with overflow: hidden. For data points near chart edges, ensure tooltips flip inward rather than getting clipped.
-    
-    Rule 6 - Never place any free-floating text, callouts, or arrow annotations inside the chart area that describe, interpret, or editorialize a data point — only numeric labels, axis titles, axis ticks, a legend, and reference line name labels sitting directly on their line are permitted.
-    
-    Rule 7 - Whenever the query involves a trend, growth, or change over time, always default to a line chart. NEVER use a stacked bar chart when the intent is to show how values change across time periods. A stacked bar with time on the X-axis is only acceptable when the explicit goal is part-to-whole composition at each time point (e.g., "what share does each tier contribute each month"), not for showing trends.
-    
-    Rule 8 - Never let data labels overlap — always stagger positions ("top center" / "bottom center"), ensure a minimum 15px gap between any two labels, and increase chart height when traces are dense.
-    
-    RULE 9 — NO LABELS OUTSIDE CHART BOUNDS: Data labels must never be clipped or rendered outside the visible chart area. Always:
-    - Set layout.margin.t to at least 80px to prevent top labels from being cut off
-    - Set cliponaxis=False on all traces
-    - For bar charts with tall bars, reduce font size of labels to 10px rather than letting them overflow
-    - Test that the highest data label has at least 40px of clearance below layout.margin.t
-    
-    RULE 10 — NO DUPLICATE OR BLURRED ENDPOINTS ON LINE CHARTS: When rendering line charts, never duplicate the final data point. Ensure:
-    - The data passed to the chart has no duplicate rows on the time axis (deduplicate with df.drop_duplicates(subset=[time_col]) before plotting)
-    - Do not add a separate scatter trace on top of a line trace for the last point unless it is intentionally styled differently (e.g., a highlighted endpoint marker); if doing so, use a distinct marker symbol and ensure it does not visually blur the line endpoint
-    - Set line.simplify=False to prevent Plotly's rendering simplification from creating visual artifacts at endpoints
-    
-    RULE 11 — NO REDUNDANT TIME PERIOD LABELS IN TABLE ROWS: When the chart or associated table has a time period column (e.g., "Period", "Month", "Quarter"), do not repeat the same period label on every row of the table if the chart already shows the time axis. If the period is the same for all rows in a grouped/filtered view, show it once in the chart title or as a subtitle annotation — not as a repeated column value in every row.
-    
-    RULE 12 — MARKET SHARE MUST SHOW PERCENTAGE: Any chart where the user asks for "market share", "share", "% share", or "proportion" MUST display percentage values on the Y-axis and in data labels, not raw mg or unit volumes. Convert to percentage before plotting:
-    df['relmora_share_pct'] = df['relmora_total_mg'] / (df['relmora_total_mg'] + df['zynava_total_mg']) * 100
-    If total market volume is unavailable, return NO_VISUALIZATION rather than showing misleading absolute values as market share.  
+You are a Visualization Agent.
+ 
+Your goal is to create a meaningful, accurate, and non-misleading Plotly visualization ONLY when the data supports it.
+ 
+You MUST prioritize correctness over forcing a chart.
+ 
+---
+ 
+## INPUTS
+ 
+User Query:
+{user_query}
+ 
+Query Decomposer Output:
+{query_decomposer_output}
+ 
+SQL Generator Output:
+{sql_generator_output}
+ 
+SQL Executor Output:
+{result_df}
+ 
+SQL Executor Output Descriptive Stats:
+{descriptive_stats}
+ 
+SUMMARY-DRIVEN VISUALIZATION RULE — METRIC PRIORITIZATION
+{summary}
+ 
+Before writing any Plotly code, parse the entire summary and extract every metric, KPI, figure, percentage, trend, and named entity from the Findings, Key Takeaways, and Opportunities sections. This extracted list is your visualization brief — it overrides all default data-driven decisions. If the data has 50 columns but the summary mentions 6 metrics, visualize those 6 only.
+ 
+METRIC HIERARCHY IN CODE:
+- Findings → primary Y-axis and dominant visual elements (tallest bars, main lines)
+- Key Takeaways → reference lines and direct annotations on the chart — never buried in tooltips
+- Opportunities → gap overlays, delta annotations, or target markers in a visually distinct color — always showing the gap between current state and potential, not just raw numbers
+ 
+HARD RULES:
+1. If a Finding and an Opportunity reference the same entity, they MUST appear on the same chart so the gap is immediately visible
+2. Every metric name on axes, hovers, and annotations must match the summary word-for-word ("Net Revenue" stays "Net Revenue" — never "Sales" or "Revenue")
+3. Every figure, percentage, and named comparison from the summary MUST appear somewhere in the visualization — as a bar, line, reference line, annotation, or hover value. A metric present in the summary but absent from the chart is a bug
+4. Before finalizing the code, audit every bullet in Findings, Key Takeaways, and Opportunities and confirm each one has a visual representation. Only return code when all metrics are accounted for
+ 
+Assume the SQL output will be reconstructed into a Pandas DataFrame named df.
+ 
+---
+ 
+## CORE DECISION LOGIC (MANDATORY)
+ 
+Before generating a chart, you MUST:
+ 
+1. Identify column types:
+ 
+   * Numeric columns
+   * Categorical columns
+   * Datetime or ordered columns
+ 
+2. Determine analytical intent:
+ 
+   * Trend → requires datetime or ordered column
+   * Comparison → categorical vs numeric
+   * Distribution → single numeric column
+   * Ranking → categorical + numeric
+   * Relationship → at least two numeric columns
+ 
+3. Validate if visualization is appropriate:
+ 
+   * If only 1 column → NO_VISUALIZATION
+   * If all columns are categorical → NO_VISUALIZATION
+   * If data is too small, ambiguous, or lacks structure → NO_VISUALIZATION
+   * If visualization would be misleading → NO_VISUALIZATION
+   
+4. Time Axis Rule: Use the dataset's exact time granularity (week/month/quarter) for the X-axis—no transformations or mixing.
+---
+ 
+## ENHANCED INTENT DETECTION (ADDED)
+ 
+In addition to the above, refine intent using semantic signals from the question:
+ 
+* Trend Analysis:
+  Keywords → "trend", "over time", "evolution", "recent", "momentum"
+ 
+* Regional / Segment Comparison:
+  Keywords → "across regions", "by tier", "comparison"
+ 
+* Contribution / Drivers:
+  Keywords → "driving", "contribution", "dependent", "share of"
+ 
+* Consistency / Variability:
+  Keywords → "consistent", "variability", "spread"
+ 
+* Adoption / Funnel / Health:
+  Keywords → "adoption", "funnel", "health", "status", "conversion"
+ 
+* Market Share:
+  Keywords → "market share", "gaining share", "losing share"
+ 
+* Competitive Comparison:
+  Keywords → multiple entities (e.g., relmora vs zynava)
+ 
+* Multi-dimensional:
+  Keywords → combinations like "region and tier"
+ 
+---
+ 
+## CHART SELECTION RULES (STRICT)
+ 
+* Line Chart:
+  Use ONLY if a datetime or ordered column exists
+ 
+* Bar Chart:
+  Use for categorical vs numeric comparisons
+ 
+* Scatter Plot:
+  Use ONLY if at least 2 numeric columns exist
+ 
+* Histogram:
+  Use for distribution of a single numeric column
+ 
+* Pie Chart:
+  Use ONLY if:
+ 
+  * ≤ 6 categories
+  * Represents part-to-whole relationship
+  * PREFERRED over bar chart when showing tier-wise or segment-wise distribution as a share of total (e.g., "tier distribution", "segment breakdown", "% share by tier")
+ 
+* Flat/tabular outputs with no clear analytical mapping:
+  Return NO_VISUALIZATION
+ 
+* If multiple chart types are possible:
+  Choose the simplest and most interpretable one
+ 
+---
+ 
+## ADVANCED CHART OVERRIDES (ADDED - HIGH PRIORITY)
+ 
+These rules OVERRIDE basic rules when applicable:
+ 
+1. Trend + Multiple Categories:
+   → Use MULTI-LINE chart (color by category)
+ 
+2. Contribution / Share:
+   → Prefer STACKED BAR
+   → If time present → STACKED AREA
+ 
+3. Market Share:
+   → ALWAYS convert to percentage if possible
+   → Use:
+ 
+   * STACKED AREA (time)
+   * 100% STACKED BAR (snapshot)
+ 
+4. Performance vs Target:
+   → Prefer grouped bar (actual vs target)
+   → If unclear → fallback to bar chart
+ 
+5. Multi-dimensional (2 categorical variables):
+   → Prefer HEATMAP (if dense data)
+   → Else GROUPED BAR
+ 
+6. Adoption / Health Categories:
+   → STACKED BAR (if categorical states exist)
+ 
+7. Consistency / Variability:
+   → If enough data → BOX PLOT
+   → Else fallback to bar/line
+ 
+8. Tier-wise or Segment Distribution (part-to-whole, no time axis):
+   → ALWAYS use PIE CHART when ≤ 6 segments and the intent is "what share does each segment represent"
+   → Show percentage labels directly on slices, not just in hover
+ 
+9. Cross-entity Distribution Comparison (e.g., relmora vs zynava tier-wise):
+   → ALWAYS use percentage proportions (%) not absolute values (mg) on the Y-axis
+   → Use GROUPED BAR with percentage labels so the comparison is meaningful across entities with different total volumes
+ 
+---
+ 
+## GROWTH RULE (VERY IMPORTANT)
+ 
+If any growth-related column exists (growth, %, change, WoW, MoM, QoQ, YoY):
+ 
+* You MUST include BOTH:
+ 
+  * Base metric (bar or line)
+  * Growth metric (secondary axis)
+ 
+* Use make_subplots with secondary_y=True
+ 
+* DO NOT mix axis strategies:
+ 
+  * If using secondary_y=True → use make_subplots ONLY
+  * NEVER manually assign yaxis='y2'
+ 
+---
+ 
+## METRIC FIDELITY RULE (CRITICAL — NEW)
+ 
+The chart MUST display exactly the metric the user asked for — never substitute a different metric even if it is available in the data:
+ 
+* If the user asked for "average calls per day" → plot avg_calls_per_day, NOT total_calls
+* If the user asked for "daily average sales" → plot daily_avg_sales, NOT total_sales
+* If the user asked for "% market share" → plot percentage share, NOT absolute mg
+* If both total and average are available and the user asked for average → use average as the primary Y-axis; total may appear as a secondary trace only if it adds context
+* Before finalizing, re-read the user query and confirm every Y-axis value matches the requested metric exactly
+ 
+---
+ 
+## COLUMN USAGE RULES
+ 
+* Use ONLY columns present in df
+ 
+* NEVER invent or infer missing columns
+ 
+* Preferred mappings:
+ 
+  * x → categorical or datetime column
+  * y → numeric column(s)
+ 
+---
+ 
+## VISUAL ENHANCEMENT RULES (ADDED)
+ 
+When generating charts, apply:
+ 
+* Sort categorical axes in descending order (for comparison charts)
+* Highlight latest time point (for trend charts)
+* Limit categories to top 10 if too many values
+* Use consistent color grouping for categories
+* Avoid clutter and over-plotting
+* Ensure readability over aesthetics
+* CRITICAL RULE: Always display geography/region names instead of geography or region IDs in visualizations.
+* All visualizations must display visible data labels for every data point.
+* For pie charts: always show both the category label and the percentage value directly on each slice using textinfo="label+percent".
+ 
+---
+ 
+## SPECIAL HANDLING RULES
+ 
+* Growth queries:
+  → Always prioritize showing trend + growth together
+ 
+* Recent period queries:
+  → Focus on latest available time window
+ 
+* Regional queries:
+  → Ensure comparisons are clearly distinguishable
+ 
+* Market share queries:
+  → Prefer percentage representation over absolute values
+ 
+* Multi-level queries:
+  → Prefer grouped or heatmap visualization
+ 
+* Growth Questions (Single-Row Output)
+ → If the question is about growth and the output has only 1 row: always render a bar chart. Show bars for the previous and current period using whichever metrics are available — prefer both total growth and daily average growth side by side; fall back to daily average growth alone if total is absent. Never skip the chart.
+ 
+---
+ 
+## PLOTLY RULES (MANDATORY)
+ 
+* Use Plotly only (plotly.express or plotly.graph_objects)
+* Output ONLY valid Python code defining `fig`
+* No explanations, no comments, no markdown
+* No Streamlit code
+ 
+---
+ 
+## LAYOUT / WIDTH RULE (CRITICAL)
+ 
+* Plotly `width` MUST be a numeric value (e.g., 600, 800, 1000)
+* NEVER use 'stretch' or 'content' inside fig.update_layout()
+* NEVER use `use_container_width`
+* The rendering layer (e.g., Streamlit) will handle container sizing
+ 
+---
+ 
+## HOVERTEMPLATE RULES (MANDATORY)
+ 
+* NEVER use Python `%` string formatting
+* ALWAYS use f-strings
+* Preserve Plotly placeholders like `%{{x}}`, `%{{y}}`
+* Escape placeholders in f-strings:
+  Example: f"Region=%{{x}}<br>Value=%{{y}}"
+* Do NOT mix `%` formatting with Plotly placeholders
+* Every value representing growth, rate, or percentage MUST include the '%' symbol—no exceptions, no alternative formats.
+---
+ 
+PLOTLY VISUALIZATION RULES — ALWAYS ENFORCE ALL:
+ 
+RULE 1 — PERIOD COMPARISONS: Never display a chart that only compares the number of days between a current period and a previous period. Every period comparison MUST always include all three metrics: total volume sales, daily average sales, and growth change (%).
+ 
+RULE 2 — NO IDS ON CHARTS: Never display raw ID fields anywhere on a chart — no axes, labels, legends, hovers, or titles. This includes campus_id, campus_region_id, campus_territory_id, and parent_id. Always resolve to their human-readable name fields before plotting: campus_account_name, campus_region, campus_territory, parent_account_name. If a name is unavailable, show "Unknown" — never fall back to the numeric ID.
+ 
+RULE 3 — NO HH:MM:SS TIMESTAMPS: Never render timestamps in HH:MM:SS format on any axis, tick, label, or hover. Always strip time components when only the date is meaningful. Use human-readable date formats appropriate to the data granularity (e.g. "Jan 2024", "Q1 2024", "12 May"). Use Plotly's tickformat or pre-format the date column before plotting.
+  Implementation: Before plotting, convert date columns with:
+    df['date'] = pd.to_datetime(df['date']).dt.strftime('%b %Y')   # for monthly
+    df['date'] = pd.to_datetime(df['date']).dt.strftime('%d %b %Y')  # for daily
+  AND set fig.update_xaxes(tickformat="%b %Y") as a backup.
+ 
+RULE 4 — NO OVERLAPPING DATA LABELS: On any chart combining bar and line traces, data labels must never overlap each other or any other chart element. Always set textposition="outside" for bar labels, increase layout.height for dense data, set cliponaxis=False, and add sufficient layout.margin.t so that labels above the highest bar are never clipped or collide with adjacent labels.
+  Additional enforcement:
+    - For multi-line charts with many data points: alternate label positions ("top center" and "bottom center") by trace so labels from different series never collide
+    - Set a minimum chart height of 500px; increase to 650px+ when 3 or more traces share the same x-axis range
+    - For bar+line combo charts: always offset bar labels (textposition="outside") and line labels (textposition="top center") with a minimum vertical gap of 15px between any two labels
+ 
+RULE 5 — HOVER TOOLTIPS MUST BE FULLY VISIBLE: Hover tooltips must never be partially cut off by the chart boundary, browser edge, or any container. Always set generous layout margins on all sides (minimum 60px), use hoverlabel=dict(namelength=-1) to prevent label truncation, set layout.hovermode="closest", and never place the chart inside a container with overflow: hidden. For data points near chart edges, ensure tooltips flip inward rather than getting clipped.
+ 
+Rule 6 - Never place any free-floating text, callouts, or arrow annotations inside the chart area that describe, interpret, or editorialize a data point — only numeric labels, axis titles, axis ticks, a legend, and reference line name labels sitting directly on their line are permitted.
+ 
+Rule 7 - Whenever the query involves a trend, growth, or change over time, always default to a line chart. NEVER use a stacked bar chart when the intent is to show how values change across time periods. A stacked bar with time on the X-axis is only acceptable when the explicit goal is part-to-whole composition at each time point (e.g., "what share does each tier contribute each month"), not for showing trends.
+ 
+Rule 8 - Never let data labels overlap — always stagger positions ("top center" / "bottom center"), ensure a minimum 15px gap between any two labels, and increase chart height when traces are dense.
+ 
+RULE 9 — NO LABELS OUTSIDE CHART BOUNDS: Data labels must never be clipped or rendered outside the visible chart area. Always:
+  - Set layout.margin.t to at least 80px to prevent top labels from being cut off
+  - Set cliponaxis=False on all traces
+  - For bar charts with tall bars, reduce font size of labels to 10px rather than letting them overflow
+  - Test that the highest data label has at least 40px of clearance below layout.margin.t
+ 
+RULE 10 — NO DUPLICATE OR BLURRED ENDPOINTS ON LINE CHARTS: When rendering line charts, never duplicate the final data point. Ensure:
+  - The data passed to the chart has no duplicate rows on the time axis (deduplicate with df.drop_duplicates(subset=[time_col]) before plotting)
+  - Do not add a separate scatter trace on top of a line trace for the last point unless it is intentionally styled differently (e.g., a highlighted endpoint marker); if doing so, use a distinct marker symbol and ensure it does not visually blur the line endpoint
+  - Set line.simplify=False to prevent Plotly's rendering simplification from creating visual artifacts at endpoints
+ 
+RULE 11 — NO REDUNDANT TIME PERIOD LABELS IN TABLE ROWS: When the chart or associated table has a time period column (e.g., "Period", "Month", "Quarter"), do not repeat the same period label on every row of the table if the chart already shows the time axis. If the period is the same for all rows in a grouped/filtered view, show it once in the chart title or as a subtitle annotation — not as a repeated column value in every row.
+ 
+RULE 12 — MARKET SHARE MUST SHOW PERCENTAGE: Any chart where the user asks for "market share", "share", "% share", or "proportion" MUST display percentage values on the Y-axis and in data labels, not raw mg or unit volumes. Convert to percentage before plotting:
+  df['relmora_share_pct'] = df['relmora_total_mg'] / (df['relmora_total_mg'] + df['zynava_total_mg']) * 100
+  If total market volume is unavailable, return NO_VISUALIZATION rather than showing misleading absolute values as market share.  
 
-    RULE 13 — ALWAYS INITIALIZE FROM df FIRST: The very first executable line of every visualization must be plot_df = df.copy() — never reference plot_df, df, or any derived DataFrame before this line exists, and never assume df has been renamed or pre-assigned outside the visualization code block.
-    
-    Rule 14 - Never render reference lines as full-width horizontal dashed lines spanning the entire chart. They collapse into an unreadable stack. Use annotations, markers, or point-specific indicators instead.
-    
-    Rule 15 - Never add interpretive commentary, business insights, leadership callouts, or analytical conclusions as text annotations directly on the chart. The chart must contain only: titles, axis labels, legend entries, and data labels. All narrative text belongs outside the visualization.
-    
-    Rule 16 - Every chart element — titles, bars, lines, and annotations — must have sufficient padding and margin so nothing overlaps or crowds another element. Use margin, pad, and standoff in the layout; offset data labels with textposition and textfont; push axis titles away from tick labels using title_standoff. Crowded or overlapping elements are a rendering failure.
+RULE 13 — ALWAYS INITIALIZE FROM df FIRST: The very first executable line of every visualization must be plot_df = df.copy() — never reference plot_df, df, or any derived DataFrame before this line exists, and never assume df has been renamed or pre-assigned outside the visualization code block.
+  
+Rule 14 - Never render reference lines as full-width horizontal dashed lines spanning the entire chart. They collapse into an unreadable stack. Use annotations, markers, or point-specific indicators instead.
+  
+Rule 15 - Never add interpretive commentary, business insights, leadership callouts, or analytical conclusions as text annotations directly on the chart. The chart must contain only: titles, axis labels, legend entries, and data labels. All narrative text belongs outside the visualization.
+  
+Rule 16 - Every chart element — titles, bars, lines, and annotations — must have sufficient padding and margin so nothing overlaps or crowds another element. Use margin, pad, and standoff in the layout; offset data labels with textposition and textfont; push axis titles away from tick labels using title_standoff. Crowded or overlapping elements are a rendering failure.
 
-    Rule 17: RULE 17 — LEGEND PLACEMENT (UPDATED): Always position the legend below the chart, never on the right side. Use:
-            pythonlayout.legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.2,
-                xanchor="center",
-                x=0.5
-            )
+Rule 17: RULE 17 — LEGEND PLACEMENT (UPDATED): Always position the legend below the chart, never on the right side. Use:
+        pythonlayout.legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.2,
+            xanchor="center",
+            x=0.5
+        )
 
-            Set layout.margin.b to at least 120px to prevent the bottom legend from being clipped
-            Never use the default Plotly legend placement — always explicitly set orientation="h" to force horizontal layout below the chart
-            Never allow the legend to render on the right side — if it appears there, it means orientation="h" was not set; this is a rendering failure
-
-
-
-    TABLE SCHEMA:
-
-    Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
-    - payer_name (VARCHAR): payer or insurance provider name
-    - payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - hcp_name (VARCHAR): healthcare provider name
-    - status (VARCHAR): enrollment or patient status
-    - enrollment_source (VARCHAR): source/channel of enrollment
-    - dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
-    - primary_speciality (VARCHAR): primary medical specialty of HCP
-    - parent_name (VARCHAR): parent account or organization name
-    - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-    - acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
-    - state (VARCHAR): HCP or account state
-    - zip (NUMBER): ZIP/postal code
-    - region (VARCHAR): sales or operational region
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): sales territory name
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - hub_patient_id (VARCHAR): unique patient ID from hub system
-    - hcp_address (VARCHAR): healthcare provider address
-    - hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - managing_entity (VARCHAR): entity responsible for patient/account management
-    - reason (VARCHAR): reason associated with enrollment or status
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - latest_dispensed_state (VARCHAR): most recent dispensed state/status
-    - latest_dispensed_date (DATE): most recent dispense date
-    - latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
-    - qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
-    - last_call_date_hcp (DATE): most recent HCP call date
-    - qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
-    - parent_id (VARCHAR): parent account identifier
-    - child_id (VARCHAR): child/sub-account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-    - qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
-
-    Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
-
-    - npi (NUMBER): National Provider Identifier (HCP unique ID).
-    - hcp_name (VARCHAR): Healthcare provider name.
-    - region (VARCHAR): Sales or operational region.
-    - territory (VARCHAR): Sales territory name.
-    - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-    - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
-    - parent_id (VARCHAR): Unique identifier of the parent account or health system.
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
-    - child_name (VARCHAR): Name of the child account, facility, or campus.
-    - parent_state (VARCHAR): State in which the parent account is located.
-    - child_state (VARCHAR): State in which the child account is located.
-    - ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
-
-    Table SD_SHIPMENTS - Shipments from Specialty Distributor
-    - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
-    - parent_name (VARCHAR): Name of the parent account or health system.
-    - parent_id (VARCHAR): parent account identifier
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
-    - number_of_bottles (NUMBER): number of bottles dispensed
-    - dosage (VARCHAR): (values: 40 mg, 60 mg)
-    - address (VARCHAR): Parent Account Address
-    - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+        Set layout.margin.b to at least 120px to prevent the bottom legend from being clipped
+        Never use the default Plotly legend placement — always explicitly set orientation="h" to force horizontal layout below the chart
+        Never allow the legend to render on the right side — if it appears there, it means orientation="h" was not set; this is a rendering failure
 
 
-    Table Dispense - Drug Dispense Data
-    - crinetics_id (VARCHAR): internal Crinetics identifier
-    - shipment_date (DATE): drug shipment date (YYYY-MM-DD)
-    - bottles_dispensed (NUMBER): number of bottles dispensed
-    - run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
-    - dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
-    - claim_type (VARCHAR): claim classification values(Paid and Quick Start)
-    - region (VARCHAR): Sales or operational region.
-    - area (VARCHAR): sales area/division
-    - territory (VARCHAR): Sales territory name.
-    - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
-    - npi (NUMBER): National Provider Identifier (HCP unique ID)
-    - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
-    - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
-    - month_year (VARCHAR): month label (e.g., 2025-01)
-    - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-    - year (VARCHAR): year label  (e.g., 2025)
 
-    ## FAIL-SAFE (IMPORTANT)
+TABLE SCHEMA:
 
-    Return NO_VISUALIZATION if:
+Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
+- payer_name (VARCHAR): payer or insurance provider name
+- payer_flag (VARCHAR): payer classification or flag (Values: Commercial, Medicare, Medicaid)
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- hcp_name (VARCHAR): healthcare provider name
+- status (VARCHAR): enrollment or patient status
+- enrollment_source (VARCHAR): source/channel of enrollment
+- dispensed_and_claim_type (VARCHAR): dispense and claim classification (Values: Yes - Paid, Yes - Quick Start, No)
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- primary_speciality (VARCHAR): primary medical specialty of HCP
+- parent_name (VARCHAR): parent account or organization name
+- type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
+- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
+- state (VARCHAR): HCP or account state
+- zip (NUMBER): ZIP/postal code
+- region (VARCHAR): sales or operational region
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): sales territory name
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- hub_patient_id (VARCHAR): unique patient ID from hub system
+- hcp_address (VARCHAR): healthcare provider address
+- hcp_acro_treated_patients (NUMBER): count of acromegaly-treated patients managed by HCP
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- managing_entity (VARCHAR): entity responsible for patient/account management
+- reason (VARCHAR): reason associated with enrollment or status
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- latest_dispensed_state (VARCHAR): most recent dispensed state/status
+- latest_dispensed_date (DATE): most recent dispense date
+- latest_dispense_days_of_supply (VARCHAR): days of supply for latest dispense
+- qtd_hcp_calls (NUMBER): quarter-to-date HCP sales calls/interactions
+- last_call_date_hcp (DATE): most recent HCP call date
+- qtd_affiliation_calls (NUMBER): quarter-to-date affiliation/account calls
+- parent_id (VARCHAR): parent account identifier
+- child_id (VARCHAR): child/sub-account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- year (VARCHAR): year label  (e.g., 2025)
+- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
+- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-    * Data does not clearly map to a valid chart
-    * Columns are ambiguous or unsuitable
-    * Visualization would be confusing or misleading
+Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
 
-    ---
+- npi (NUMBER): National Provider Identifier (HCP unique ID).
+- hcp_name (VARCHAR): Healthcare provider name.
+- region (VARCHAR): Sales or operational region.
+- territory (VARCHAR): Sales territory name.
+- number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
+- child_name (VARCHAR): Name of the child account, facility, or campus.
+- parent_state (VARCHAR): State in which the parent account is located.
+- child_state (VARCHAR): State in which the child account is located.
+- ptc_flag (VARCHAR): Indicates whether the account is designated as a PTC target account (Y = Yes, N = No).
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
-    ## OUTPUT
+Table SD_SHIPMENTS - Shipments from Specialty Distributor
+- transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
+- parent_name (VARCHAR): Name of the parent account or health system.
+- parent_id (VARCHAR): parent account identifier
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- account_type (VARCHAR): account or enrollment type indicator (Values: PTC, Non - PTC)
+- number_of_bottles (NUMBER): number of bottles dispensed
+- dosage (VARCHAR): (values: 40 mg, 60 mg)
+- address (VARCHAR): Parent Account Address
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 
-    Return either:
 
-    * Python code defining `fig`
+Table Dispense - Drug Dispense Data
+- crinetics_id (VARCHAR): internal Crinetics identifier
+- shipment_date (DATE): drug shipment date (YYYY-MM-DD)
+- bottles_dispensed (NUMBER): number of bottles dispensed
+- run_count (VARCHAR): Indicates whether the dispense was the patient's initial shipment or a subsequent refill.Values: First Fill, Refill.
+- dosage (VARCHAR): Strength of the drug dispensed. values: 40 mg, 60 mg.
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): sales area/division
+- territory (VARCHAR): Sales territory name.
+- run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
+- npi (NUMBER): National Provider Identifier (HCP unique ID)
+- enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- week_end_date (DATE): week ending Friday (YYYY-MM-DD)
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
+- year (VARCHAR): year label  (e.g., 2025)
 
-    OR
+## FAIL-SAFE (IMPORTANT)
 
-    * NO_VISUALIZATION
+Return NO_VISUALIZATION if:
 
-    """
+* Data does not clearly map to a valid chart
+* Columns are ambiguous or unsuitable
+* Visualization would be confusing or misleading
+
+---
+
+## OUTPUT
+
+Return either:
+
+* Python code defining `fig`
+
+OR
+
+* NO_VISUALIZATION
+
+"""
     response=model.invoke(prompt).content
     # visualization_code=demask_string_visualization(response)
     # print("Visualization Code Masked")

@@ -79,9 +79,10 @@ def load_masking_table(table_name: str = "MASK_MAPPING") -> dict:
 
 # Define your fallback column priority order here
 COLUMN_FALLBACK_ORDER = [
-    "campus_region",
-    "campus_territory", 
-    "campus_account_name"
+    "region",
+    "area",
+    "territory", 
+    "parent_name"
     # add more columns in priority order as needed
 ]
 
@@ -512,97 +513,96 @@ def get_intent_summary(user_query):
         Examples:
 
         Input:
-        "Compare the growth of the month Jan'26 and Dec'25?"
+        "Give me the total number of enrollments"
         Output:
         {{
-        "intent_summary": "Compare relmora sales growth between Dec'25 and Jan'26, using total monthly sales if both months are complete; otherwise normalize both months to weekly average sales before calculating percent growth, and include absolute sales values for both months."
+        "intent_summary": "Calculate the total number of enrollments for the default quarter-to-date period anchored to the most recent available week_end_date, using COUNT of crinetics_id from the enrollments dataset."
         }}
 
         Input:
-        "How does our breadth look like?"
+        ""How are my enrollments trending?"
         Output:
         {{
-        "intent_summary": "Assess breadth of relmora distribution/coverage by counting active campus accounts (relmora_total_mg > 0) and total shipped volume over the most recent 52 weeks of available data, at the national level (no campus grouping)."
+        "intent_summary": "Show the year-to-date weekly trend of enrollments using count of crinetics_id, anchored to the year containing the latest available week_end_date, and include both weekly enrollment volume and the cumulative sum of weekly enrollments with explicit weekly time boundaries."
         }}
 
         Input:
-        "How are we doing in terms of adding new businesses?" 
+        "Give me the total number of dispenses" 
         Output:
         {{
-        "intent_summary": "Assess performance in adding new campus (child) businesses by counting newly active campus_ids in the most recent 13 weeks versus the prior 13 weeks, including absolute counts and growth percent, using only accounts with relmora activity (relmora_total_mg > 0)."
+        "intent_summary": "Calculate the total number of dispenses using the Dispense table, defaulting to quarter-to-date for the most recent available quarter, and summing bottles_dispensed."
         }}
 
         Input:
-        "How does new account addition look like across regions?"
+        "How are the dispenses trending?"
         Output:
         {{
-        "intent_summary": "Show new campus account additions across campus regions over the most recent 52 weeks of available data, where a new account is defined as a campus_id whose first observed week_end_date with relmora_total_mg > 0 occurs within the window."
+        "intent_summary": "Show the year-to-date weekly trend of total dispenses using the Dispense table, where total dispenses are calculated as the sum of bottles_dispensed, and also include the cumulative year-to-date running total by week, anchored to the current year in the data with explicit weekly time boundaries."
         }}
 
         Input:
-        "Compare the growth in Q3'25 with Q4'25?" 
+        "How does enrollments look like across regions?" 
         Output:
         {{
-        "intent_summary": "Compare relmora sales growth between calendar Q3-25 and Q4-25, reporting both absolute sales and growth percentage using totals if both quarters are complete, otherwise using weekly-average normalized sales for both quarters."
+        "intent_summary": "Show the year-to-date weekly trend of total dispenses using the Dispense table, where total dispenses are calculated as the sum of bottles_dispensed, and also include the cumulative year-to-date running total by week, anchored to the current year in the data with explicit weekly time boundaries."
         }}
 
         Input:
-        "Is short-term sales performance consistent across regions?"
+        "how does the dispenses contribution look like by each region"
         Output:
         {{
-        "intent_summary": "Assess whether short-term relmora sales performance is consistent across regions by comparing recent 4 week_end_date periods versus prior 4 week_end_date periods at the campus-region level, including regional and national sales metrics, period boundaries based strictly on week_end_date values, and a region-versus-nation performance flag calculated using daily average growth."
+        "intent_summary": "Calculate dispense contribution by region for the default quarter-to-date reporting period, where dispense contribution is defined as total bottles from both Dispense and SD_SHIPMENTS combined, and report each region's share of the combined national total along with absolute volume and time boundaries."
         }}
 
         Input:
-        "How does account adoption look like within target campuses across regions?" 
+        "Top 10 territories by enrollments." 
         Output:
         {{
-        "intent_summary": "Assess account adoption within target campuses across regions at the campus entity level using the most recent 13 weeks of available data. Adoption must be expressed as adoption_rate_r13w = active_accounts_r13w / total_target_accounts_r13w, where active accounts are distinct target campus_ids with positive relmora volume during the period and total target accounts are all distinct target campus_ids in each target campus region. Remove all sales metrics from the output."
+        "intent_summary": "Return the top 10 territories ranked by quarter-to-date enrollments from the most recent available quarter in the enrollments dataset, using count of crinetics_id and including quarter boundary dates."
         }}
 
         Input:
-        "Are we gaining or losing share by tier across regions?" 
+        "What is the activation trend of non targeted HCPs?" 
         Output:
         {{
-        "intent_summary": "Assess whether market share is being gained or lost by campus tier across regions by comparing recent 3 months versus prior 3 months using the market share dataset, and add a performance-vs-nation column based on whether each tier-region segment's share change is higher or lower than the national share change."
+        "intent_summary": "Calculate the year-to-date weekly activation trend for non targeted HCPs from the enrollments dataset, where activation is defined as an HCP whose first-ever enrollment transaction date falls within the current year-to-date period, restricted to non targeted HCPs with tier = 'N', and include the cumulative sum alongside the weekly trend. Week boundaries must align to the week_end_date values present in the data, with week_start_date defined as week_end_date minus 6 days, except when January 1st of the current year falls inside that weekly boundary, in which case week_start_date must be overridden to January 1st of the current year."
         }}
 
         Input:
-        "What are the average calls per day across regions?"
+        "Give me the list of top63 accounts not activated so far"
         Output:
         {{
-        "intent_summary": "Calculate average calls per day across regions using calls_data for call activity and territory_effort for effort day denominators, defaulting to the most recent 3 completed calendar months. The calculation must be performed at the monthly level first, anchored to month_year for total calls, then rolled up to region across the selected months as total monthly calls divided by total monthly effort days"
+        "intent_summary": "Return the list of Top 63 parent accounts that are not activated so far, using the Top 63 target/master list anchored to parent_marketting_target and identifying activated accounts as the union of parent_ids from enrollments and sd_shipments across all available history. Preserve all target-list accounts and return one row per parent_id."
         }}
 
         Input:
-        "What are the average touches per day across territories?" 
+        "Give me the list of hcps that have adopted our drug so far." 
         Output:
         {{
-        "intent_summary": "Calculate the average touches per day for each campus territory using calls_data filtered to TOUCH activity and territory_effort as the denominator source, defaulting to the most recent 3 completed calendar months anchored to the latest available call_date in calls_data, while avoiding any lateral join dependency."
+        "intent_summary": "Return the list of HCPs who have adopted the drug so far, interpreting 'adopted' as having at least one enrollment record and 'so far' as Launch to Date across the full available transaction date range. Output one row per unique HCP with required HCP-level fields and the number of enrollments brought."
         }}
 
         Input:
-        "What is the call effort by tier across regions?" 
+        "What is the reach across territories?" 
         Output:
         {{
-        "intent_summary": "Calculate call effort as total call count by campus tier across regions using call-level data, defaulting to the most recent 3 completed months, and include effort percentage within each region-tier combination relative to total national call effort for the same period."
+        "intent_summary": "Calculate call-based reach across territories using the target HCP universe from marketting_target and reached HCPs from calls_data, defaulting to quarter-to-date for the most recent quarter because no time period was specified."
         }}
 
         Input:
-        "What is the reach by tier across regions?" 
+        "What is the nation reach?" 
         Output:
         {{
-        "intent_summary": "Calculate call-based reach by campus tier across regions for the default most recent 13 weeks of available data, using only target campuses. Reach is defined as distinct target campuses reached divided by distinct total target campuses, grouped by campus_region and campus_tier."
+        "intent_summary": "Calculate national reach as the distinct count of target HCP NPIs reached through calls divided by the distinct count of total target HCP NPIs, using the default quarter-to-date period anchored to the most recent quarter available in the data."
         }}
 
         Input:
         "What is the call frequency across regions?" 
         Output:
         {{
-        "intent_summary": "Calculate call frequency by region for the default most recent 13 weeks of available call data, using calls_data only. Call frequency is defined as unique call count divided by distinct campus count, grouped by campus_region_id and campus_region, with the rolling window anchored to the maximum week_end_date in calls_data."
+        "intent_summary": "Calculate call frequency by region using calls_data and marketting_target, where frequency is total calls to reached target HCPs divided by distinct reached target HCP NPIs. Because no time period is specified, default to quarter-to-date using the most recent quarter_year. Include only Face To Face, Phone, and Video channels by default and restrict to target HCPs in tiers 1-4."
+
         }}
-
-
         Return JSON only:
         {{"intent_summary": "<canonical intent>"}}
     """

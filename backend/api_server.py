@@ -3259,7 +3259,7 @@ def _generate_ppt_file(
     chart_path_overrides: Optional[list[Optional[str]]] = None,
     cancel_check: Optional[Callable[[], None]] = None,
 ) -> str:
-    from deck_creator_agent_7 import build_ppt
+    from deck_creator_agent_Crinetics import build_ppt
 
     template_path = os.getenv("PPT_TEMPLATE_PATH", "").strip()
     logo_path = os.getenv("PPT_LOGO_PATH", "").strip()
@@ -3306,7 +3306,7 @@ def _build_preview_payload(
     chart_path_overrides: Optional[list[Optional[str]]] = None,
     cancel_check: Optional[Callable[[], None]] = None,
 ) -> list[dict[str, Any]]:
-    from deck_creator_agent_7 import build_slide_data, parse_conversation
+    from deck_creator_agent_Crinetics import build_slide_data, parse_conversation
 
     print(f"[PPT] preview: build start messages={len(messages)}")
     blocks = parse_conversation(messages)
