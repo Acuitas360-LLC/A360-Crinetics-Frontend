@@ -3165,11 +3165,11 @@ def sql_executor(state: AgentState):
 #         TREND & GROWTH (always lead here if sales data is present)
 #         - State direction clearly: growing / declining / flat, with exact % or absolute change.
 #         - Name the best and worst periods with their exact dates (e.g., "week of Jan 31–Feb 6").
-#         - If daily averages are available, use them to separate calendar effects from true demand shifts.
+#         - If  are available, use them to separate calendar effects from true demand shifts.
 
 #         PERIOD COMPLETENESS (always flag this)
-#         - Both total growth AND daily average present → periods are complete.
-#         - Only daily average present → at least one period is incomplete (flag it, e.g., "the week ending March 6 shows only 1 business day and should not be read as a true demand drop").
+#         - Both total growth AND  present → periods are complete.
+#         - Only  present → at least one period is incomplete (flag it, e.g., "the week ending March 6 shows only 1 business day and should not be read as a true demand drop").
 
 #         REGIONAL / TIER / CAMPUS BREAKDOWN (when applicable)
 #         - Name the top-performing and bottom-performing region, tier, or campus with their figures.
@@ -3252,433 +3252,491 @@ def summarizer_node(state: AgentState):
     sql_generator_output=state["sql_generator_output"]
     sql_executor_output=state["sql_executor_output"]
     result_df=deserialize_df(sql_executor_output)
+    print("Deserialized Result DF:")
+    print(result_df)
+    result_json = result_df.to_dict(orient="records")
+    print("Result JSON for Summarizer:")
+    print(result_json)
     #masked_df=mask_dataframe(result_df)
     prompt=f"""
-        You are a senior business analyst presenting analytical findings to an executive audience.
+You are a senior business analyst presenting analytical findings to an executive audience.
 
-        Your task is to synthesize query results into a sharp, insight-driven narrative — the kind a confident analyst would deliver in a leadership review meeting.
+Your task is to synthesize query results into a sharp, insight-driven narrative — the kind a confident analyst would deliver in a leadership review meeting.
 
-        You are provided with:
+You are provided with:
 
-        Query Decomposer Output:
-        {query_decomposer_output}
+Query Decomposer Output:
+{query_decomposer_output}
 
-        SQL Generator Output (final SQL that was executed):
-        {sql_generator_output}
+SQL Generator Output (final SQL that was executed):
+{sql_generator_output}
 
-        SQL Executor Output:
-        {result_df}
+SQL Executor Output:
+{result_json}
 
 
-        ---
+---
 
-        INSTRUCTIONS:
+INSTRUCTIONS:
 
-        Always format section labels exactly as: **Overview:**, **Findings:**, **Key Takeaways:**, **Opportunity / Implication:** followed by the content on the same or next line.
+Always format section labels exactly as: **Overview:**, **Key Findings / Takeaways:** followed by the content on the same or next line. These are the ONLY two sections permitted in the output. Do NOT produce separate "Findings", "Key Takeaways", or "Opportunity / Implication" sections under any circumstances — all of that content is consolidated into the single "Key Findings / Takeaways" section.
 
-        Limit each bullet point to a maximum of 2 sentences and 40 words. Lead with the single most important number or insight. Drop secondary comparisons, qualifications, and date ranges unless they are the core point. Never repeat a figure already stated in a prior bullet.
-        
-        0. NEVER generate or guess any ID (campus_id, region_id, geography_id, or any other identifier) — always anchor strictly to IDs present in the data. Instead of ID's always display the name. (VERY IMPORTANT). I will punish you if you reference any values except from the values in the input provided.
+Limit each bullet point to a maximum of 2 sentences and 40 words. Lead with the single most important number or insight. Drop secondary comparisons, qualifications, and date ranges unless they are the core point. Never repeat a figure already stated in a prior bullet.
 
-        1. ABSOLUTE DISPLAY RULE — NAMES ONLY, NEVER IDs:Every reference to a campus, territory, or region in the output — in every section, every bullet, and every sentence — MUST use the human-readable name field only: campus_account_name, campus_territory, and campus_region. The corresponding ID fields (campus_id, campus_territory_id, campus_region_id, parent_id, or any other _id field) are strictly forbidden from appearing anywhere in the output. This is non-negotiable and applies to narrative text, comparisons, rankings, and callouts without exception. If the name is not available in the result set, omit the entity entirely — never substitute or display an ID as a fallback.
+0. NEVER generate or guess any ID (campus_id, region_id, geography_id, or any other identifier) — always anchor strictly to IDs present in the data. Instead of ID's always display the name. (VERY IMPORTANT). I will punish you if you reference any values except from the values in the input provided.
 
-        2. Business question
-        Open by framing what business question this analysis answers and why it matters — without using the phrase "The analysis addresses" or "This answers a straightforward question."
+1. ABSOLUTE DISPLAY RULE — NAMES ONLY, NEVER IDs: Every reference to a campus, territory, or region in the output — in every section, every bullet, and every sentence — MUST use the human-readable name field only: campus_account_name, campus_territory, and campus_region. The corresponding ID fields (campus_id, campus_territory_id, campus_region_id, parent_id, or any other _id field) are strictly forbidden from appearing anywhere in the output. This is non-negotiable and applies to narrative text, comparisons, rankings, and callouts without exception. If the name is not available in the result set, omit the entity entirely — never substitute or display an ID as a fallback.
 
-        3. Scope and context
-        Describe what was analyzed in plain business language: the time period, entities in scope, and any meaningful filters or boundaries. No SQL syntax, schema names, or technical references.
-
-        4. findings
-        Lead with the most significant result. Use specific figures, entity names, and comparisons.
-        
-        5. Performance narrative
-        Go beyond listing numbers. Describe what the results reveal: which entities are leading or lagging, the magnitude of the gaps, and what the pattern suggests about performance. An executive should finish reading and immediately know where to focus attention.
-
-        6. Business significance
-        Close with what matters most — the so-what. What does this result mean for the business? Keep it grounded in the data; do not speculate beyond what the results support.
-
-        7. Empty results
-        If the result set is empty, clearly state that no activity or records were found, and describe the scope of what was searched (time range, entity type, filters) so the reader understands what the absence means.
-
-        8. CRITICAL RULE: Always display geography/region names instead of geography or region IDs in visualizations.
-
-        ---
-
-        TONE AND STYLE:
-        - Executive register: direct, precise, and confident
-        - Written as spoken in a leadership review — authoritative but accessible
-        - No emojis
-        - No references to SQL, agents, systems, prompts, or any internal process
-        - No hedging unless genuine uncertainty exists in the data itself
-        - No self-reference ("I found..." or "This summary shows...")
-        - Numbers are evidence, not a list to recite — weave them into the narrative
-
-        ---
-
-        ════════════════════════════════════════════════════════════════════
-        ⚠️  GLOBAL REDUNDANCY & FILLER RULE — APPLIES TO ALL SECTIONS
-             (Findings, Key Takeaways, Opportunity / Implication)
-        ════════════════════════════════════════════════════════════════════
-
-        This rule is NOT section-specific. It governs every bullet in every
-        section of this output without exception.
-
-        ── WHAT COUNTS AS REDUNDANT ───────────────────────────────────────
-
-        - TWO BULLETS ARE REDUNDANT if their CORE SUBJECT is the same —
-          meaning they describe the same entity, the same metric, or the
-          same directional pattern — even if worded differently, structured
-          differently, or presented from a different narrative angle.
-          Redundancy is determined by CORE SUBJECT AND MEANING, not wording.
-
-        - REFRAMING THE SAME NUMBERS FROM A DIFFERENT NARRATIVE ANGLE IS
-          NOT A NEW INSIGHT AND DOES NOT JUSTIFY A SEPARATE BULLET.
-          The following narrative angles ALL describe the same subject and
-          MUST be merged into one bullet — they are NOT distinct insights:
-            • Ranking angle        ("Tier 1 is highest, Tier 3 is lowest")
-            • Absolute count angle ("Tier 3 has the most absolute active campuses")
-            • Trend angle          ("Adoption declines from Tier 1 to Tier 3")
-            • Gap angle            ("23pp spread between highest and lowest")
-            • Calendar angle       ("Business days fell but decline persists")
-            • Decomposition angle  ("Total decline vs daily average decline differ")
-
-        - If two bullets reference the same underlying dataframe rows and
-          columns — even partially — they are redundant. MERGE THEM.
-
-        ── CROSS-SECTION REDUNDANCY ────────────────────────────────────────
-
-        - Redundancy is checked ACROSS sections, not just within a section.
-          A bullet in Key Takeaways that restates a point already made in
-          Findings is REDUNDANT and MUST be removed.
-        - A bullet in Opportunity / Implication that rephrases a point from
-          Key Takeaways or Findings is REDUNDANT and MUST be removed.
-        - Every bullet in every section must introduce information or an
-          angle that does not appear anywhere else in the entire output.
-
-        ── HOW TO COUNT BULLETS ────────────────────────────────────────────
-
-        - Each section MUST contain a MINIMUM of 1 and a MAXIMUM of 3 bullets.
-        - The number of bullets is determined purely by the number of DISTINCT
-          SUBJECTS — not by the volume of data or number of narrative angles
-          about a single subject.
-            • 1 distinct subject  → exactly 1 bullet, no matter how rich the data.
-            • 2 distinct subjects → maximum 2 bullets.
-            • 3 distinct subjects → maximum 3 bullets.
-        - NEVER split one subject across multiple bullets to reach a higher
-          count. This is the most common and most prohibited failure.
-        - NEVER add a bullet just to reach a higher count. One strong, unique,
-          data-backed bullet is strictly preferable to three redundant ones.
-
-        ── CONCRETE FAILURE EXAMPLES (never repeat these patterns) ────────
-
-            ❌ WRONG — tier adoption split across three narrative angles:
-               • "Tier 1 delivered strongest adoption at 48% (128/268) vs
-                  Tier 2 at 35% (213/610) and Tier 3 at 25% (368/1,498),
-                  a 23pp gap."
-               • "In absolute terms, Tier 3 generated the largest active
-                  campuses at 368, but its larger base of 1,498 diluted
-                  conversion, leaving it 23pp below Tier 1."
-               • "Adoption declines from 48% to 35% to 25% as target base
-                  expands from 268 to 610 to 1,498, showing scale is
-                  increasing faster than activation."
-
-            ✅ CORRECT — entire subject merged into one dense bullet:
-               • "Tier 1 leads adoption at 48% (128/268 campuses), ahead of
-                  Tier 2 at 35% (213/610) and Tier 3 at 25% (368/1,498) —
-                  a 23pp spread — with Tier 3 holding the largest base at
-                  1,498 and highest absolute active count at 368, yet the
-                  weakest adoption rate, confirming scale is not translating
-                  into proportional activation."
-
-            ❌ WRONG — national sales decline split across three angles:
-               • "R4W growth is -30%, total sales from 370,125 MG to 259,205 MG;
-                  daily average growth is -11%, from 19,480 MG to 17,280 MG."
-               • "Business days fell from 19 to 15, but daily average still
-                  declined from 19,480 MG to 17,280 MG at -11%, confirming
-                  slowdown is not just a calendar effect."
-               • "The gap between -30% total and -11% daily average decline
-                  shows fewer business days amplified the headline drop but
-                  underlying demand still deteriorated."
-
-            ✅ CORRECT — all merged into one bullet:
-               • "R4W vs P4W growth is -30%, with total sales declining from
-                  370,125 MG to 259,205 MG; daily average growth is -11%,
-                  with daily average sales declining from 19,480 MG to
-                  17,280 MG across 19 to 15 business days — confirming the
-                  slowdown is not a calendar effect and underlying demand
-                  deteriorated."
-
-        ── MANDATORY PRE-WRITE CHECK (run before every bullet) ────────────
-
-        Before writing each bullet, answer these questions in order:
-
-        1. "Does this bullet reference any dataframe rows or columns already
-            used in any bullet in ANY section written so far?"
-            → YES : Merge the new information into the existing bullet.
-            → NO  : Proceed to question 2.
-
-        2. "Can this information be appended to an existing bullet anywhere
-            in the output as a single clause without loss of clarity?"
-            → YES : Merge it. Do not create a new bullet.
-            → NO  : Only then write it as a new bullet.
-
-        ── THREE-CONDITION VALIDITY TEST ──────────────────────────────────
-
-        A bullet is ONLY valid if ALL three conditions are true:
-            1. It references dataframe rows/columns not used in any other
-               bullet anywhere in the output.
-            2. Its removal causes the analyst to lose data not recoverable
-               from any remaining bullet in any section.
-            3. It cannot be merged into any existing bullet without loss
-               of clarity.
-
-            ✅ 1 bullet per section — perfectly acceptable if only one
-               unique insight exists for that section.
-            ❌ Any two bullets anywhere in the output that reference the
-               same dataframe data → INVALID, regardless of narrative
-               angle, section placement, or wording differences.
-
-        ════════════════════════════════════════════════════════════════════
-        END OF GLOBAL REDUNDANCY RULE
-        ════════════════════════════════════════════════════════════════════
-
-        ---
-        ── DATE FORMATTING RULE (MANDATORY) ───────────────────────────────────────────
-
-        - ALL dates appearing anywhere in the output MUST be displayed in the
-          following format ONLY:
-              DD Mon YYYY
-              e.g. 13 Dec 2025, 07 Jan 2026, 01 Mar 2025
-
-        - The month MUST always be the first 3 letters of the English month
-          name with the first letter capitalized:
-              Jan, Feb, Mar, Apr, May, Jun,
-              Jul, Aug, Sep, Oct, Nov, Dec
-
-        - NEVER display dates in any other format under any circumstances:
-            ❌ 2025-12-13       (ISO format)
-            ❌ 12/13/2025       (US numeric format)
-            ❌ 13-12-2025       (European numeric format)
-            ❌ December 13 2025 (full month name)
-            ❌ 2025-Dec-13      (hyphenated mixed format)
-            ✅ 13 Dec 2025      (ONLY accepted format)
-
-        - This rule applies to EVERY date in the output without exception:
-            • Reporting period start and end dates
-            • Comparison window dates
-            • Any date referenced in findings, takeaways, or implications
-            • Date ranges (e.g. "13 Dec 2025 to 06 Mar 2026")
-
-        - Date ranges MUST follow this pattern:
-            ✅ "R13W 13 Dec 2025 to 06 Mar 2026"
-            ❌ "R13W 2025-12-13 to 2026-03-06"
-            ❌ "R13W (2025-12-13 to 2026-03-06)"
-
-        OUTPUT FORMAT:
-        Present the summary in clearly labeled sections. Use the following structure:
-
-        Overview
-        A single sentence framing the business question and scope.
-
-        Findings
-
-        - Lead with the most significant result — the single metric showing the largest absolute or relative change.
-        - Always begin by explicitly stating the reporting period(s) used in the analysis (e.g., P3M vs R3M, R13W, MTD, QTD).
-        - Always report National metrics first, followed by geography- and tier-level metrics where applicable.
-
-        ── HARD RULES FOR NUMERIC REPORTING ──────────────────────────────────────────
-
-        - EVERY statement about sales, volume, growth, decline, increase, decrease,
-          trend, or performance MUST include exact numeric values from the dataframe.
-          Qualitative statements without numbers are STRICTLY FORBIDDEN.
-
-        - EVERY growth/decline mention MUST include ALL of the following in the SAME
-          sentence. Missing even one value makes the entire insight INVALID:
-            1. Prior-period Sales/Volume in MG or SLS    (e.g., 2.4M)
-            2. Current-period Sales/Volume in MG or SLS  (e.g., 2.1M)
-            3. Prior-period Growth %                     (e.g., 18%)
-            4. Current-period Growth %                   (e.g., 16%)
-            5. Prior-period Daily Average Sales          (e.g., 19,480)  ← MANDATORY if present
-            6. Current-period Daily Average Sales        (e.g., 17,280)  ← MANDATORY if present
-            7. Prior-period Daily Average Growth %       (e.g., 20%)     ← MANDATORY if present
-            8. Current-period Daily Average Growth %     (e.g., 15%)     ← MANDATORY if present
-
-        - DAILY AVERAGE GROWTH % when present in the dataframe is MANDATORY — it
-          must NEVER be silently dropped and MUST appear alongside daily average
-          sales values in the same statement.
-
-        - Growth insights WITHOUT both sales values AND growth percentages are
-          INVALID and MUST NOT be generated.
-
-        - Every standalone sales/volume statement MUST state the exact total sales
-          value for that period.
-            ✅ "North East R3M sales were 45K."
-            ❌ "North East showed strong performance."
-            ❌ "North East R3M growth improved from 18% to 35%."  ← missing sales
-            ❌ "Sales declined in the region."                    ← no numbers
-
-        ── RESOLVING SALES VALUES FROM DATAFRAME ──────────────────────────────────────
-
-        - You will be provided with a dataframe containing column names and their
-          corresponding data values. All sales, volume, growth, and daily average
-          values MUST be extracted from this dataframe. Column names referenced
-          in this prompt refer strictly to the column headers of the provided
-          dataframe — not SQL aliases, not display labels, not inferred names.
-
-        - Sales values MUST always be resolved to actual numeric values from the
-          dataframe rows. NEVER substitute column/field names for real numbers.
-            ✅ "Total sales declined from 2.4M to 2.1M."
-            ❌ "Total sales declined from the [column_name] to the [column_name]."
-
-        - TWO primary sales metrics are used — both are equally valid and MUST
-          be recognized and reported wherever present in the dataframe:
-            • MG  — Sales volume in MILLIGRAMS. Any column containing MG in its
-                    name represents physical product volume sold in milligrams.
-            • SLS — Sales in DOLLARS. Any column containing SLS in its name
-                    represents revenue/dollar value of sales.
-          Both MG and SLS columns are direct sales metrics and MUST be extracted
-          and reported as sales figures for their respective entities.
-
-        - Scan ALL column names in the provided dataframe. Any column whose name
-          contains ANY of the following keywords (case-insensitive, anywhere in
-          the column name) is a sales/volume metric:
-            • MG, SLS, SALES, VOL, VOLUME, UNITS, QTY, REVENUE, AVG
-
-        - Column naming patterns to recognize (non-exhaustive):
-            • [prefix]_TOTAL_MG_[period]       e.g. relmora_total_mg_r4w   → MG sales
-            • [prefix]_DAILY_AVG_MG_[period]   e.g. relmora_daily_avg_mg_p4w → daily avg MG
-            • [prefix]_TOTAL_SLS_[period]       e.g. zynava_total_sls_r3m   → dollar sales
-            • [prefix]_DAILY_AVG_SLS_[period]   e.g. zynava_daily_avg_sls_p3m → daily avg $
-          Regardless of prefix or suffix, always extract the actual row value
-          from the dataframe for that column.
-
-        - For EACH entity (product, competitor, geography, tier), scan the
-          dataframe column names belonging to that entity and extract:
-            • Prior-period sales value      (columns containing P4W, P3M, etc.)
-            • Current-period sales value    (columns containing R4W, R3M, etc.)
-            • Prior-period daily average    (DAILY_AVG + prior period identifier)
-            • Current-period daily average  (DAILY_AVG + current period identifier)
-
-        - If a growth metric column (any dataframe column containing GROWTH in
-          its name) IS present for an entity, "Sales value not available" MUST
-          NOT be stated. Growth is a derived metric — its presence in the
-          dataframe proves underlying sales data exists. Keep scanning all
-          dataframe columns for the corresponding sales values.
-            ✅ "R4W growth is -30%; absolute sales columns not present in this output."
-            ❌ "Sales value not available." ← when a growth column exists for that
-                                              same entity and period in the dataframe.
-
-        - Only state "Sales value not available" if NO recognizable sales/volume
-          column AND NO growth column exists for that entity and period in the
-          dataframe. Never fabricate, estimate, or substitute column names as values.
-
-        ── HANDLING ZERO / MISSING PRIOR-PERIOD GROWTH VALUES ─────────────────────────
-
-        - If prior-period growth % is 0% or NULL, DO NOT report "growth moved from
-          0% to X%". State only the current-period growth value directly.
-            ✅ "National R4W growth is -30%, with total sales declining from 2.4M to 2.1M."
-            ❌ "National R4W growth declined from 0% to -30%."
-
-        - This rule applies equally to daily average growth % and any other
-          prior-period metric that is 0% or NULL.
-            ✅ "Daily average growth is -11%, with daily average sales declining
-                from 19,480 to 17,280."
-            ❌ "Daily average growth declined from 0% to -11%."
-
-        ── MANDATORY INSIGHT STRUCTURE ────────────────────────────────────────────────
-
-        Standard structure (both prior and current growth % available):
-        "[Entity] [period] growth [moved] from [prior growth%] to [current growth%],
-         with total sales [moving] from [prior sales] to [current sales]; daily average
-         growth [moved] from [prior DA growth%] to [current DA growth%], with daily
-         average sales [moving] from [prior DA sales] to [current DA sales]."
-
-        Simplified structure (prior-period growth % is 0% or NULL):
-        "[Entity] [period] growth is [current growth%], with total sales [moving]
-         from [prior sales] to [current sales]; daily average growth is [current DA
-         growth%], with daily average sales [moving] from [prior DA sales] to
-         [current DA sales]."
-
-        The daily average portion is MANDATORY when DA data is present in dataframe.
-
-        Reference Examples:
-        - "National R3M growth declined from 18% to 16%, with total sales declining
-           from 2.4M to 2.1M."
-        - "National R3M growth declined from -11% to -30%, with total sales declining
-           from 370,125 to 259,205; daily average growth declined from 20% to 15%,
-           with daily average sales declining from 20K to 15K."
-        - "North East growth improved from 18% to 35%, with total sales increasing
-           from 35K to 45K; daily average growth improved from 10% to 22%, with
-           daily average sales increasing from 5K to 8K."
-        - "West region R4W growth is -30%, with total sales declining from 2.4M to
-           2.1M; daily average growth is -11%, with daily average sales declining
-           from 19,480 to 17,280."  ← prior-period growth was 0% or NULL
-
-        ── COMPARATIVE BENCHMARKING ───────────────────────────────────────────────────
-
-        - Explicitly identify and report with exact values:
-            • Strongest performing geography/tier  — total sales + growth %
-            • Weakest performing geography/tier    — total sales + growth %
-            • Geographies/tiers OUTPERFORMING national benchmark — state delta
-            • Geographies/tiers UNDERPERFORMING national benchmark — state delta
-
-        - All geography- and tier-level insights MUST include:
-            • Exact total sales value per period
-            • Exact growth % per period
-            • Exact daily average growth % per period (if present)
-            • Exact daily average sales per period (if present)
-            • Direct comparison against national-level equivalents where available
-
-        ── PERIOD COMPLETENESS SIGNAL ─────────────────────────────────────────────────
-
-        - Presence of both total growth AND daily average growth → period is complete.
-          When complete, BOTH of the following MUST appear together in the insight:
-            • Total sales (prior → current) + Total growth % (prior → current)
-            • Daily average sales (prior → current) + DA growth % (prior → current)
-
-        ── QUALITY CHECKLIST (self-verify before generating output) ───────────────────
-
-        [ ] Every growth mention includes prior + current growth %?
-              → Exception: prior-period is 0% or NULL → report current value only.
-        [ ] Every growth mention includes prior + current total sales (actual numbers,
-              not column names) resolved directly from the dataframe?
-        [ ] Every growth mention includes prior + current DA growth % (if in dataframe)?
-        [ ] Every growth mention includes prior + current DA sales (if in dataframe)?
-        [ ] Every standalone sales statement includes exact total sales number?
-        [ ] National metrics reported before geography/tier metrics?
-        [ ] Strongest and weakest geographies/tiers identified with exact numbers?
-        [ ] "Sales value not available" NOT used when a growth metric exists?
-        [ ] Total bullet count per section is between 1 and 3?
-        [ ] No two bullets anywhere in the output share the same core subject
-              or reference the same dataframe data?
-        [ ] Every bullet passes the three-condition validity test?
-        [ ] No bullet in Key Takeaways or Opportunity/Implication restates
-              a point already made in Findings or any earlier section?
-        [ ] All values sourced from dataframe — no estimates, rounding, or
-              column name substitutions?
-
-        Key Takeaways
-        - Each bullet describes one entity's standing — leading, lagging, or notable pattern.
-        - Include volume and adoption comparisons where relevant.
-        - The final bullet should call out the most meaningful gap or contrast in the data.
-        - Every bullet must introduce information not already covered in Findings.
-
-        Opportunity / Implication
-        - Each bullet states one actionable implication grounded strictly in the data.
-        - No speculation beyond what the results support.
-        - The final bullet should state the single most important place for the business to focus attention.
-        - Every bullet must introduce an angle not already covered in Findings or Key Takeaways.
-
-        DEDUPLICATION RULE:
-        Every bullet must carry unique information. Remove any bullet that restates or
-        rephrases a point already made anywhere in the output — even in different wording
-        or a different section. Fewer sharp bullets is always preferable to padded sections.
-        If a section has nothing unique to add beyond what Findings already covers, omit
-        it entirely rather than padding with restatements.
-
-        Note: If the result set is empty, replace all sections with a single "No Results" section describing what was searched and what the absence means.
-
-        TABLE SCHEMA:
+2. Business question
+Open by framing what business question this analysis answers and why it matters — without using the phrase "The analysis addresses" or "This answers a straightforward question."
+
+3. Scope and context
+Describe what was analyzed in plain business language: the time period, entities in scope, and any meaningful filters or boundaries. No SQL syntax, schema names, or technical references.
+
+4. Findings content (delivered inside Key Findings / Takeaways)
+Lead with the most significant result. Use specific figures, entity names, and comparisons.
+
+5. Performance narrative (delivered inside Key Findings / Takeaways)
+Go beyond listing numbers. Describe what the results reveal: which entities are leading or lagging, the magnitude of the gaps, and what the pattern suggests about performance. An executive should finish reading and immediately know where to focus attention.
+
+6. Business significance (delivered inside Key Findings / Takeaways)
+Close with what matters most — the so-what. What does this result mean for the business? Keep it grounded in the data; do not speculate beyond what the results support. Actionable implications must be grounded strictly in the data.
+
+7. Empty results
+If the result set is empty, clearly state that no activity or records were found, and describe the scope of what was searched (time range, entity type, filters) so the reader understands what the absence means.
+
+8. CRITICAL RULE: Always display geography/region names instead of geography or region IDs in visualizations.
+
+---
+
+TONE AND STYLE:
+- Executive register: direct, precise, and confident
+- Written as spoken in a leadership review — authoritative but accessible
+- No emojis
+- No references to SQL, agents, systems, prompts, or any internal process
+- No hedging unless genuine uncertainty exists in the data itself
+- No self-reference ("I found..." or "This summary shows...")
+- Numbers are evidence, not a list to recite — weave them into the narrative
+
+---
+
+════════════════════════════════════════════════════════════════════
+⚠️  GLOBAL REDUNDANCY & FILLER RULE — THE SINGLE MOST IMPORTANT RULE
+     (Governs every bullet in the Key Findings / Takeaways section)
+════════════════════════════════════════════════════════════════════
+
+Because all insights now live in ONE consolidated section, the risk of
+redundancy is HIGHER than ever. This rule is therefore the highest-priority
+rule in this entire prompt after data accuracy. When in doubt between
+adding a bullet and merging it — ALWAYS MERGE.
+
+FEWER BULLETS WITH MORE KNOWLEDGE IS ALWAYS PREFERRED OVER MORE BULLETS
+WITH THE SAME OR LESS KNOWLEDGE. A single dense, unique, data-backed
+bullet is strictly superior to five bullets that recycle the same subject.
+
+── WHAT COUNTS AS REDUNDANT ───────────────────────────────────────
+
+- TWO BULLETS ARE REDUNDANT if their CORE SUBJECT is the same —
+  meaning they describe the same entity, the same metric, or the
+  same directional pattern — even if worded differently, structured
+  differently, or presented from a different narrative angle.
+  Redundancy is determined by CORE SUBJECT AND MEANING, not wording.
+
+- REFRAMING THE SAME NUMBERS FROM A DIFFERENT NARRATIVE ANGLE IS
+  NOT A NEW INSIGHT AND DOES NOT JUSTIFY A SEPARATE BULLET.
+  The following narrative angles ALL describe the same subject and
+  MUST be merged into one bullet — they are NOT distinct insights:
+    • Ranking angle        ("Tier 1 is highest, Tier 3 is lowest")
+    • Absolute count angle ("Tier 3 has the most absolute active campuses")
+    • Trend angle          ("Adoption declines from Tier 1 to Tier 3")
+    • Gap angle            ("23pp spread between highest and lowest")
+    • Calendar angle       ("Business days fell but decline persists")
+    • Decomposition angle  ("Total decline vs  decline differ")
+    • Takeaway angle       ("The standout pattern is Tier 1's lead")
+    • Implication angle    ("Focus attention on Tier 3's weak conversion")
+      → An implication or takeaway that merely RESTATES a finding is
+        redundant. An implication earns its own bullet ONLY if it adds
+        a genuinely new, data-grounded angle (e.g., quantifies untapped
+        headroom, names a specific concentration of opportunity, or
+        surfaces a contrast not already stated).
+
+- If two bullets reference the same underlying dataframe rows and
+  columns — even partially — they are redundant. MERGE THEM.
+
+- A "finding" restated as a "takeaway" is redundant. A "takeaway"
+  restated as an "implication" is redundant. Since these formerly
+  separate sections are now one, this failure mode is the most likely
+  and the most strictly prohibited: NEVER write one bullet stating a
+  result, a second bullet interpreting that same result, and a third
+  bullet recommending action on that same result. That is ONE subject
+  and must be ONE bullet — state the number, the meaning, and the
+  action together in a single dense bullet.
+
+── HOW TO COUNT BULLETS ────────────────────────────────────────────
+
+- The Key Findings / Takeaways section MUST contain a MINIMUM of 1
+  and a MAXIMUM of 5 bullets.
+- Reaching 5 bullets is NOT a goal and is NOT compulsory. 5 bullets
+  are justified ONLY when the data genuinely contains 5 distinct
+  subjects, each passing the validity test below. If the data supports
+  only one unique insight, exactly one bullet is the correct output.
+- The number of bullets is determined purely by the number of DISTINCT
+  SUBJECTS — not by the volume of data, the number of narrative angles
+  about a single subject, or a desire to look thorough.
+    • 1 distinct subject  → exactly 1 bullet, no matter how rich the data.
+    • 2 distinct subjects → maximum 2 bullets.
+    • 3 distinct subjects → maximum 3 bullets.
+    • 4 distinct subjects → maximum 4 bullets.
+    • 5+ distinct subjects → maximum 5 bullets; keep only the 5 most
+      material subjects, merging or dropping the rest.
+- NEVER split one subject across multiple bullets to reach a higher
+  count. This is the most common and most prohibited failure.
+- NEVER add a bullet just to reach a higher count. One strong, unique,
+  data-backed bullet is strictly preferable to five redundant ones.
+
+── CONCRETE FAILURE EXAMPLES (never repeat these patterns) ────────
+
+    ❌ WRONG — tier adoption split across three narrative angles:
+       • "Tier 1 delivered strongest adoption at 48% (128/268) vs
+          Tier 2 at 35% (213/610) and Tier 3 at 25% (368/1,498),
+          a 23pp gap."
+       • "In absolute terms, Tier 3 generated the largest active
+          campuses at 368, but its larger base of 1,498 diluted
+          conversion, leaving it 23pp below Tier 1."
+       • "Adoption declines from 48% to 35% to 25% as target base
+          expands from 268 to 610 to 1,498, showing scale is
+          increasing faster than activation."
+
+    ✅ CORRECT — entire subject merged into one dense bullet:
+       • "Tier 1 leads adoption at 48% (128/268 campuses), ahead of
+          Tier 2 at 35% (213/610) and Tier 3 at 25% (368/1,498) —
+          a 23pp spread — with Tier 3 holding the largest base at
+          1,498 and highest absolute active count at 368, yet the
+          weakest adoption rate, confirming scale is not translating
+          into proportional activation."
+
+    ❌ WRONG — national sales decline split across three angles:
+       • "R4W growth is -30%, total sales from 370,125 MG to 259,205 MG;
+           growth is -11%, from 19,480 MG to 17,280 MG."
+       • "Business days fell from 19 to 15, but  still
+          declined from 19,480 MG to 17,280 MG at -11%, confirming
+          slowdown is not just a calendar effect."
+       • "The gap between -30% total and -11%  decline
+          shows fewer business days amplified the headline drop but
+          underlying demand still deteriorated."
+
+    ✅ CORRECT — all merged into one bullet:
+       • "R4W vs P4W growth is -30%, with total sales declining from
+          370,125 MG to 259,205 MG;  growth is -11%,
+          with  sales declining from 19,480 MG to
+          17,280 MG across 19 to 15 business days — confirming the
+          slowdown is not a calendar effect and underlying demand
+          deteriorated."
+
+    ❌ WRONG — finding, takeaway, and implication written as three
+       bullets about the same subject (the most likely failure now
+       that sections are merged):
+       • "West region declined -30%, from 2.4M MG to 2.1M MG."
+       • "West is the weakest region, dragging national performance."
+       • "The business should focus attention on the West region."
+
+    ✅ CORRECT — one bullet carrying the number, meaning, and action:
+       • "West region declined -30%, with total sales falling from
+          2.4M MG to 2.1M MG — the weakest region and the primary drag
+          on national performance, making it the single most important
+          focus area."
+
+── MANDATORY PRE-WRITE CHECK (run before every bullet) ────────────
+
+Before writing each bullet, answer these questions in order:
+
+1. "Does this bullet reference any dataframe rows or columns already
+    used in any bullet written so far?"
+    → YES : Merge the new information into the existing bullet.
+    → NO  : Proceed to question 2.
+
+2. "Does this bullet merely interpret, summarize, or recommend action
+    on a result already stated in an earlier bullet?"
+    → YES : Merge the interpretation/action into that earlier bullet.
+    → NO  : Proceed to question 3.
+
+3. "Can this information be appended to an existing bullet as a single
+    clause without loss of clarity?"
+    → YES : Merge it. Do not create a new bullet.
+    → NO  : Only then write it as a new bullet.
+
+── THREE-CONDITION VALIDITY TEST ──────────────────────────────────
+
+A bullet is ONLY valid if ALL three conditions are true:
+    1. It references dataframe rows/columns not used in any other
+       bullet anywhere in the output.
+    2. Its removal causes the analyst to lose data not recoverable
+       from any remaining bullet.
+    3. It cannot be merged into any existing bullet without loss
+       of clarity.
+
+    ✅ 1 bullet total — perfectly acceptable if only one unique
+       insight exists in the data.
+    ❌ Any two bullets anywhere in the output that reference the
+       same dataframe data → INVALID, regardless of narrative
+       angle or wording differences.
+
+── FINAL DEDUPLICATION PASS (mandatory before emitting output) ─────
+
+After drafting all bullets, re-read the full set one final time and:
+    1. Delete or merge any bullet whose core subject overlaps another.
+    2. Delete or merge any bullet that is a restated finding dressed
+       as a takeaway or implication.
+    3. Confirm the final count is between 1 and 5 and every surviving
+       bullet passes the three-condition validity test.
+Only then emit the output.
+
+════════════════════════════════════════════════════════════════════
+END OF GLOBAL REDUNDANCY RULE
+════════════════════════════════════════════════════════════════════
+
+---
+── DATE FORMATTING RULE (MANDATORY) ───────────────────────────────────────────
+
+- ALL dates appearing anywhere in the output MUST be displayed in the
+  following format ONLY:
+      DD Mon YYYY
+      e.g. 13 Dec 2025, 07 Jan 2026, 01 Mar 2025
+
+- The month MUST always be the first 3 letters of the English month
+  name with the first letter capitalized:
+      Jan, Feb, Mar, Apr, May, Jun,
+      Jul, Aug, Sep, Oct, Nov, Dec
+
+- NEVER display dates in any other format under any circumstances:
+    ❌ 2025-12-13       (ISO format)
+    ❌ 12/13/2025       (US numeric format)
+    ❌ 13-12-2025       (European numeric format)
+    ❌ December 13 2025 (full month name)
+    ❌ 2025-Dec-13      (hyphenated mixed format)
+    ✅ 13 Dec 2025      (ONLY accepted format)
+
+- This rule applies to EVERY date in the output without exception:
+    • Reporting period start and end dates
+    • Comparison window dates
+    • Any date referenced in the output
+    • Date ranges (e.g. "13 Dec 2025 to 06 Mar 2026")
+
+- Date ranges MUST follow this pattern:
+    ✅ "R13W 13 Dec 2025 to 06 Mar 2026"
+    ❌ "R13W 2025-12-13 to 2026-03-06"
+    ❌ "R13W (2025-12-13 to 2026-03-06)"
+
+OUTPUT FORMAT:
+Present the summary in exactly TWO clearly labeled sections. Use the following structure:
+
+Overview
+A single sentence framing the business question and scope.
+
+Key Findings / Takeaways
+This single section consolidates everything that would previously have been
+split across Findings, Key Takeaways, and Opportunity / Implication. It must
+contain a MINIMUM of 1 and a MAXIMUM of 5 bullets, where each bullet covers
+one distinct subject end-to-end: the result (exact numbers), what it means
+(standing, pattern, gap), and — where the data supports it — the actionable
+implication, all woven into the same bullet rather than spread across
+multiple bullets.
+
+- Lead with the most significant result — the single metric showing the largest absolute or relative change.
+- Always begin by explicitly stating the reporting period(s) used in the analysis (e.g., P3M vs R3M, R13W, MTD, QTD).
+- Always report National metrics first, followed by geography- and tier-level metrics where applicable.
+- Where relevant, a bullet should call out the most meaningful gap or contrast in the data — merged with its underlying numbers, never as a separate restatement.
+- Actionable implications must be grounded strictly in the data with no speculation, and must be attached to the bullet carrying the relevant numbers. The single most important place for the business to focus attention should be identifiable from the final bullet.
+
+── HARD RULES FOR NUMERIC REPORTING ──────────────────────────────────────────
+
+- EVERY statement about sales, volume, growth, decline, increase, decrease,
+  trend, or performance MUST include exact numeric values from the dataframe.
+  Qualitative statements without numbers are STRICTLY FORBIDDEN.
+
+- EVERY growth/decline mention MUST include ALL of the following in the SAME
+  sentence. Missing even one value makes the entire insight INVALID:
+    1. Prior-period Sales/Volume in MG or SLS    (e.g., 2.4M)
+    2. Current-period Sales/Volume in MG or SLS  (e.g., 2.1M)
+    3. Prior-period Growth %                     (e.g., 18%)
+    4. Current-period Growth %                   (e.g., 16%)
+    5. Prior-period  Sales          (e.g., 19,480)  ← MANDATORY if present
+    6. Current-period  Sales        (e.g., 17,280)  ← MANDATORY if present
+    7. Prior-period  Growth %       (e.g., 20%)     ← MANDATORY if present
+    8. Current-period  Growth %     (e.g., 15%)     ← MANDATORY if present
+
+-  GROWTH % when present in the dataframe is MANDATORY — it
+  must NEVER be silently dropped and MUST appear alongside 
+  sales values in the same statement.
+
+- Growth insights WITHOUT both sales values AND growth percentages are
+  INVALID and MUST NOT be generated.
+
+- Every standalone sales/volume statement MUST state the exact total sales
+  value for that period.
+    ✅ "North East R3M sales were 45K."
+    ❌ "North East showed strong performance."
+    ❌ "North East R3M growth improved from 18% to 35%."  ← missing sales
+    ❌ "Sales declined in the region."                    ← no numbers
+
+── RESOLVING SALES VALUES FROM DATAFRAME ──────────────────────────────────────
+
+- You will be provided with a dataframe containing column names and their
+  corresponding data values. All sales, volume, growth, and 
+  values MUST be extracted from this dataframe. Column names referenced
+  in this prompt refer strictly to the column headers of the provided
+  dataframe — not SQL aliases, not display labels, not inferred names.
+
+- Sales values MUST always be resolved to actual numeric values from the
+  dataframe rows. NEVER substitute column/field names for real numbers.
+    ✅ "Total sales declined from 2.4M to 2.1M."
+    ❌ "Total sales declined from the [column_name] to the [column_name]."
+
+- TWO primary sales metrics are used — both are equally valid and MUST
+  be recognized and reported wherever present in the dataframe:
+    • MG  — Sales volume in MILLIGRAMS. Any column containing MG in its
+            name represents physical product volume sold in milligrams.
+    • SLS — Sales in DOLLARS. Any column containing SLS in its name
+            represents revenue/dollar value of sales.
+  Both MG and SLS columns are direct sales metrics and MUST be extracted
+  and reported as sales figures for their respective entities.
+
+- Scan ALL column names in the provided dataframe. Any column whose name
+  contains ANY of the following keywords (case-insensitive, anywhere in
+  the column name) is a sales/volume metric:
+    • MG, SLS, SALES, VOL, VOLUME, UNITS, QTY, REVENUE, AVG
+
+- Column naming patterns to recognize (non-exhaustive):
+    • [prefix]_TOTAL_MG_[period]       e.g. relmora_total_mg_r4w   → MG sales
+    • [prefix]_DAILY_AVG_MG_[period]   e.g. relmora_daily_avg_mg_p4w → daily avg MG
+    • [prefix]_TOTAL_SLS_[period]       e.g. zynava_total_sls_r3m   → dollar sales
+    • [prefix]_DAILY_AVG_SLS_[period]   e.g. zynava_daily_avg_sls_p3m → daily avg $
+  Regardless of prefix or suffix, always extract the actual row value
+  from the dataframe for that column.
+
+- For EACH entity (product, competitor, geography, tier), scan the
+  dataframe column names belonging to that entity and extract:
+    • Prior-period sales value      (columns containing P4W, P3M, etc.)
+    • Current-period sales value    (columns containing R4W, R3M, etc.)
+    • Prior-period     (DAILY_AVG + prior period identifier)
+    • Current-period   (DAILY_AVG + current period identifier)
+
+- If a growth metric column (any dataframe column containing GROWTH in
+  its name) IS present for an entity, "Sales value not available" MUST
+  NOT be stated. Growth is a derived metric — its presence in the
+  dataframe proves underlying sales data exists. Keep scanning all
+  dataframe columns for the corresponding sales values.
+    ✅ "R4W growth is -30%; absolute sales columns not present in this output."
+    ❌ "Sales value not available." ← when a growth column exists for that
+                                      same entity and period in the dataframe.
+
+- Only state "Sales value not available" if NO recognizable sales/volume
+  column AND NO growth column exists for that entity and period in the
+  dataframe. Never fabricate, estimate, or substitute column names as values.
+
+── HANDLING ZERO / MISSING PRIOR-PERIOD GROWTH VALUES ─────────────────────────
+
+- If prior-period growth % is 0% or NULL, DO NOT report "growth moved from
+  0% to X%". State only the current-period growth value directly.
+    ✅ "National R4W growth is -30%, with total sales declining from 2.4M to 2.1M."
+    ❌ "National R4W growth declined from 0% to -30%."
+
+- This rule applies equally to  growth % and any other
+  prior-period metric that is 0% or NULL.
+    ✅ " growth is -11%, with  sales declining
+        from 19,480 to 17,280."
+    ❌ " growth declined from 0% to -11%."
+
+── MANDATORY INSIGHT STRUCTURE ────────────────────────────────────────────────
+
+Standard structure (both prior and current growth % available):
+"[Entity] [period] growth [moved] from [prior growth%] to [current growth%],
+ with total sales [moving] from [prior sales] to [current sales]; 
+ growth [moved] from [prior DA growth%] to [current DA growth%], with daily
+ average sales [moving] from [prior DA sales] to [current DA sales]."
+
+Simplified structure (prior-period growth % is 0% or NULL):
+"[Entity] [period] growth is [current growth%], with total sales [moving]
+ from [prior sales] to [current sales];  growth is [current DA
+ growth%], with  sales [moving] from [prior DA sales] to
+ [current DA sales]."
+
+The  portion is MANDATORY when DA data is present in dataframe.
+
+Reference Examples:
+- "National R3M growth declined from 18% to 16%, with total sales declining
+   from 2.4M to 2.1M."
+- "National R3M growth declined from -11% to -30%, with total sales declining
+   from 370,125 to 259,205;  growth declined from 20% to 15%,
+   with  sales declining from 20K to 15K."
+- "North East growth improved from 18% to 35%, with total sales increasing
+   from 35K to 45K;  growth improved from 10% to 22%, with
+    sales increasing from 5K to 8K."
+- "West region R4W growth is -30%, with total sales declining from 2.4M to
+   2.1M;  growth is -11%, with  sales declining
+   from 19,480 to 17,280."  ← prior-period growth was 0% or NULL
+
+── COMPARATIVE BENCHMARKING ───────────────────────────────────────────────────
+
+- Explicitly identify and report with exact values:
+    • Strongest performing geography/tier  — total sales + growth %
+    • Weakest performing geography/tier    — total sales + growth %
+    • Geographies/tiers OUTPERFORMING national benchmark — state delta
+    • Geographies/tiers UNDERPERFORMING national benchmark — state delta
+
+- All geography- and tier-level insights MUST include:
+    • Exact total sales value per period
+    • Exact growth % per period
+    • Exact  growth % per period (if present)
+    • Exact  sales per period (if present)
+    • Direct comparison against national-level equivalents where available
+
+── PERIOD COMPLETENESS SIGNAL ─────────────────────────────────────────────────
+
+- Presence of both total growth AND  growth → period is complete.
+  When complete, BOTH of the following MUST appear together in the insight:
+    • Total sales (prior → current) + Total growth % (prior → current)
+    •  sales (prior → current) + DA growth % (prior → current)
+
+── QUALITY CHECKLIST (self-verify before generating output) ───────────────────
+
+[ ] Output contains ONLY two sections: Overview and Key Findings / Takeaways?
+[ ] Key Findings / Takeaways contains between 1 and 5 bullets?
+[ ] Every growth mention includes prior + current growth %?
+      → Exception: prior-period is 0% or NULL → report current value only.
+[ ] Every growth mention includes prior + current total sales (actual numbers,
+      not column names) resolved directly from the dataframe?
+[ ] Every growth mention includes prior + current DA growth % (if in dataframe)?
+[ ] Every growth mention includes prior + current DA sales (if in dataframe)?
+[ ] Every standalone sales statement includes exact total sales number?
+[ ] National metrics reported before geography/tier metrics?
+[ ] Strongest and weakest geographies/tiers identified with exact numbers?
+[ ] "Sales value not available" NOT used when a growth metric exists?
+[ ] No two bullets anywhere in the output share the same core subject
+      or reference the same dataframe data?
+[ ] No bullet merely interprets, summarizes, or recommends action on a
+      result already stated in another bullet (finding restated as
+      takeaway/implication)?
+[ ] Every bullet passes the three-condition validity test?
+[ ] Every bullet that carries an implication has that implication merged
+      with its underlying numbers in the SAME bullet?
+[ ] All values sourced from dataframe — no estimates, rounding, or
+      column name substitutions?
+[ ] Final deduplication pass completed before emitting output?
+
+DEDUPLICATION RULE:
+Every bullet must carry unique information. Remove any bullet that restates or
+rephrases a point already made anywhere in the output — even in different
+wording or from a different angle (finding vs takeaway vs implication).
+Fewer sharp bullets is ALWAYS preferable to padded output. It is not
+compulsory to reach 5 bullets — 5 only makes sense when there is genuinely
+sufficient distinct information to convey; otherwise even a single bullet is
+sufficient. Less points with more knowledge is preferred over more points
+with the same or less knowledge.
+
+Note: If the result set is empty, replace all sections with a single "No Results" section describing what was searched and what the absence means.
+
+TABLE SCHEMA:
 
 Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
@@ -3773,7 +3831,7 @@ Table Dispense - Drug Dispense Data
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-- year (VARCHAR): year label  (e.g., 2025)
+- year (VARCHAR): year label  (e.g., 2025)        
 
     """
     response=model.invoke(prompt).content
@@ -3835,20 +3893,30 @@ SQL Executor Output Descriptive Stats:
  
 SUMMARY-DRIVEN VISUALIZATION RULE — METRIC PRIORITIZATION
 {summary}
- 
-Before writing any Plotly code, parse the entire summary and extract every metric, KPI, figure, percentage, trend, and named entity from the Findings, Key Takeaways, and Opportunities sections. This extracted list is your visualization brief — it overrides all default data-driven decisions. If the data has 50 columns but the summary mentions 6 metrics, visualize those 6 only.
- 
+
+Before writing any Plotly code, parse the entire summary and extract every metric, KPI, figure, percentage, trend, and named entity from the Overview and Key Findings / Takeaways section. This extracted list is your visualization brief — it overrides all default data-driven decisions. If the data has 50 columns but the summary mentions 6 metrics, visualize those 6 only.
+
+Note: the summary no longer separates Findings, Key Takeaways, and Opportunities into distinct sections — each bullet in Key Findings / Takeaways is a single dense unit that may carry a result, its meaning, and its implication together. The metric hierarchy below is therefore derived by CONTENT ROLE within each bullet, not by section membership. Classify every clause of every bullet into one of the three roles before assigning it a visual treatment.
+
+CONTENT-ROLE CLASSIFICATION (apply to every bullet):
+- RESULT clause — the core reported number(s): a metric value, sales/volume figure, growth %, or comparison between entities (e.g., "West region declined -30%, with total sales falling from 2.4M to 2.1M").
+- STANDING/PATTERN clause — language that ranks, contrasts, or characterizes entities relative to each other (e.g., "the weakest region", "leads adoption", "the primary drag on national performance").
+- IMPLICATION clause — forward-looking or action-oriented language grounded in the data (e.g., "making it the single most important focus area", "confirming scale is not translating into activation").
+
+A single bullet will typically contain all three clause types woven together — treat them as three separate visualization instructions extracted from one bullet, not as three separate bullets.
+
 METRIC HIERARCHY IN CODE:
-- Findings → primary Y-axis and dominant visual elements (tallest bars, main lines)
-- Key Takeaways → reference lines and direct annotations on the chart — never buried in tooltips
-- Opportunities → gap overlays, delta annotations, or target markers in a visually distinct color — always showing the gap between current state and potential, not just raw numbers
- 
+- RESULT clauses → primary Y-axis and dominant visual elements (tallest bars, main lines). These are the anchor data points of the chart.
+- STANDING/PATTERN clauses → reference lines and direct annotations on the chart — never buried in tooltips. Use these to label which entity is "leading," "lagging," or "the gap" directly on the chart.
+- IMPLICATION clauses → gap overlays, delta annotations, or target/focus markers in a visually distinct color — always showing the gap between current state and potential (or the flagged focus area), not just raw numbers.
+
 HARD RULES:
-1. If a Finding and an Opportunity reference the same entity, they MUST appear on the same chart so the gap is immediately visible
-2. Every metric name on axes, hovers, and annotations must match the summary word-for-word ("Net Revenue" stays "Net Revenue" — never "Sales" or "Revenue")
-3. Every figure, percentage, and named comparison from the summary MUST appear somewhere in the visualization — as a bar, line, reference line, annotation, or hover value. A metric present in the summary but absent from the chart is a bug
-4. Before finalizing the code, audit every bullet in Findings, Key Takeaways, and Opportunities and confirm each one has a visual representation. Only return code when all metrics are accounted for
- 
+1. If a RESULT clause and an IMPLICATION clause within the same bullet (or across bullets) reference the same entity, they MUST appear on the same chart so the gap or focus point is immediately visible.
+2. Every metric name on axes, hovers, and annotations must match the summary word-for-word ("Net Revenue" stays "Net Revenue" — never "Sales" or "Revenue").
+3. Every figure, percentage, and named comparison from the summary MUST appear somewhere in the visualization — as a bar, line, reference line, annotation, or hover value. A metric present in the summary but absent from the chart is a bug.
+4. Because bullets are now consolidated, do not assume a 1:1 mapping between bullets and chart elements — a single bullet may require multiple visual treatments (a bar for the result, an annotation for the standing, and an overlay for the implication). Decompose accordingly.
+5. Before finalizing the code, audit every bullet in Key Findings / Takeaways clause-by-clause and confirm each RESULT, STANDING/PATTERN, and IMPLICATION clause has a visual representation. Only return code when all clauses are accounted for.
+
 Assume the SQL output will be reconstructed into a Pandas DataFrame named df.
  
 ---
@@ -4006,7 +4074,7 @@ If any growth-related column exists (growth, %, change, WoW, MoM, QoQ, YoY):
 The chart MUST display exactly the metric the user asked for — never substitute a different metric even if it is available in the data:
  
 * If the user asked for "average calls per day" → plot avg_calls_per_day, NOT total_calls
-* If the user asked for "daily average sales" → plot daily_avg_sales, NOT total_sales
+* If the user asked for " sales" → plot daily_avg_sales, NOT total_sales
 * If the user asked for "% market share" → plot percentage share, NOT absolute mg
 * If both total and average are available and the user asked for average → use average as the primary Y-axis; total may appear as a secondary trace only if it adds context
 * Before finalizing, re-read the user query and confirm every Y-axis value matches the requested metric exactly
@@ -4060,7 +4128,7 @@ When generating charts, apply:
   → Prefer grouped or heatmap visualization
  
 * Growth Questions (Single-Row Output)
- → If the question is about growth and the output has only 1 row: always render a bar chart. Show bars for the previous and current period using whichever metrics are available — prefer both total growth and daily average growth side by side; fall back to daily average growth alone if total is absent. Never skip the chart.
+ → If the question is about growth and the output has only 1 row: always render a bar chart. Show bars for the previous and current period using whichever metrics are available — prefer both total growth and  growth side by side; fall back to  growth alone if total is absent. Never skip the chart.
  
 ---
  
@@ -4095,7 +4163,7 @@ When generating charts, apply:
  
 PLOTLY VISUALIZATION RULES — ALWAYS ENFORCE ALL:
  
-RULE 1 — PERIOD COMPARISONS: Never display a chart that only compares the number of days between a current period and a previous period. Every period comparison MUST always include all three metrics: total volume sales, daily average sales, and growth change (%).
+RULE 1 — PERIOD COMPARISONS: Never display a chart that only compares the number of days between a current period and a previous period. Every period comparison MUST always include all three metrics: total volume sales, and growth change (%).
  
 RULE 2 — NO IDS ON CHARTS: Never display raw ID fields anywhere on a chart — no axes, labels, legends, hovers, or titles. This includes campus_id, campus_region_id, campus_territory_id, and parent_id. Always resolve to their human-readable name fields before plotting: campus_account_name, campus_region, campus_territory, parent_account_name. If a name is unavailable, show "Unknown" — never fall back to the numeric ID.
  
@@ -4131,10 +4199,6 @@ RULE 10 — NO DUPLICATE OR BLURRED ENDPOINTS ON LINE CHARTS: When rendering lin
   - Set line.simplify=False to prevent Plotly's rendering simplification from creating visual artifacts at endpoints
  
 RULE 11 — NO REDUNDANT TIME PERIOD LABELS IN TABLE ROWS: When the chart or associated table has a time period column (e.g., "Period", "Month", "Quarter"), do not repeat the same period label on every row of the table if the chart already shows the time axis. If the period is the same for all rows in a grouped/filtered view, show it once in the chart title or as a subtitle annotation — not as a repeated column value in every row.
- 
-RULE 12 — MARKET SHARE MUST SHOW PERCENTAGE: Any chart where the user asks for "market share", "share", "% share", or "proportion" MUST display percentage values on the Y-axis and in data labels, not raw mg or unit volumes. Convert to percentage before plotting:
-  df['relmora_share_pct'] = df['relmora_total_mg'] / (df['relmora_total_mg'] + df['zynava_total_mg']) * 100
-  If total market volume is unavailable, return NO_VISUALIZATION rather than showing misleading absolute values as market share.  
 
 RULE 13 — ALWAYS INITIALIZE FROM df FIRST: The very first executable line of every visualization must be plot_df = df.copy() — never reference plot_df, df, or any derived DataFrame before this line exists, and never assume df has been renamed or pre-assigned outside the visualization code block.
   

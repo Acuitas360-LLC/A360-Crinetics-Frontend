@@ -977,7 +977,7 @@ def create_ppt(slide_data: dict,
         # --- LOGO BELOW LABEL (no overlap now) ---
         LOGO_W = 0.8
         LOGO_H = 0.4
-        LOGO_MARGIN = 0.2
+        LOGO_MARGIN = 0.1
 
         if logo_path and os.path.exists(logo_path):
             slide.shapes.add_picture(
@@ -1033,8 +1033,8 @@ def create_ppt(slide_data: dict,
 def build_ppt(
     messages,
     output_path: str = "final_presentation.pptx",
-    uploaded_pptx_path: str | None = "Geron.pptx",
-    logo_path: str | None = "Geron_Logo.png",
+    uploaded_pptx_path: str | None = "Crinetics_ppt.pptx",
+    logo_path: str | None = "Crinetics_logo.png",
     chart_path_overrides: list[str] | None = None,
     cancel_check: Callable[[], None] | None = None,
 ) -> str:

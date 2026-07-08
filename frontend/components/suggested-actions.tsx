@@ -33,6 +33,7 @@ type StarterCategory = {
 type DataInfoItem = {
   label: string;
   description: string;
+  timePeriod: string;
 };
 
 const STARTER_QUESTION_CATEGORIES: readonly StarterCategory[] = [
@@ -70,12 +71,13 @@ const STARTER_QUESTION_CATEGORIES: readonly StarterCategory[] = [
     label: "Execution",
     questions: [
 
-      "What is the reach across territories?",
-      "What is the reach across pods?",
-      "What is the reach across regions?",
       "What is the national reach?",
+      "What is the national call frequency?",
+      "What is the reach across regions?",
       "What is the reach across tiers?",
-      "What is the national call frequency?"
+      "What is the reach across pods?",
+      "What is the reach across territories?"
+
 
     ],
   },
@@ -96,32 +98,38 @@ const DATA_INFO_ITEMS: readonly DataInfoItem[] = [
   {
     label: "ENROLLMENTS",
     description:
-      "Tracks patient enrollment and HCP engagement activity across territories, updated through July 3, 2026.",
-  },
-  {
-    label: "MARKETING_TARGET",
-    description:
-      "Highlights prioritized target HCPs for strategic commercial focus, as of Q2 2026.",
-  },
-  {
-    label: "PARENT_MARKETING_TARGET",
-    description:
-      "Provides a parent account-level view of prioritized target health systems for strategic commercial focus, as of Q2 2026.",
-  },
-  {
-    label: "SD_SHIPMENTS",
-    description:
-      "Captures specialty distributor shipment volumes by account and territory, updated through July 3, 2026.",
+      "Palsonify's patient enrollment data and corresponding HCP details, including the complete approval cycle of the patient at the transaction level.",
+    timePeriod: "Updated through July 3, 2026",
   },
   {
     label: "DISPENSE",
     description:
-      "Records drug dispense transactions, including fills, refills, and dosage details, from the specialty pharmacies (Biologics and Orsini) and Hub (IQVIA), updated through July 3, 2026.",
+      "Palsonify's drug dispense transactions, including fills, refills, and dosage details, from the specialty pharmacies (Biologics and Orsini) and Hub (IQVIA).",
+    timePeriod: "Updated through July 3, 2026",
+  },
+  {
+    label: "SD_SHIPMENTS",
+    description:
+      "Palsonify's specialty distributor shipment volumes by account.",
+    timePeriod: "Updated through July 3, 2026",
   },
   {
     label: "CALLS_DATA",
     description:
-      "Logs HCP call activity from the respective TSs and SAMs, updated through July 3, 2026.",
+      "HCP call activity from the respective TSs and SAMs.",
+    timePeriod: "Updated through July 3, 2026",
+  },
+  {
+    label: "HCP TARGET LIST",
+    description:
+      "Highlights prioritized target HCPs for strategic commercial focus.",
+    timePeriod: "As of Q2 2026",
+  },
+  {
+    label: "PARENT ACCOUNT TARGET LIST",
+    description:
+      "List of parent accounts prioritized for strategic commercial focus.",
+    timePeriod: "As of Q2 2026",
   },
 ];
 
@@ -179,28 +187,39 @@ function PureSuggestedActions({
               Data Info
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>Data Info</DialogTitle>
               <DialogDescription>
-                Quick definitions of the datasets powering the suggested questions.
+                List of Data Intelligence available for insight generation.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
-              <div className="rounded-2xl border bg-muted/30 p-4">
-                <ul className="space-y-3 text-sm leading-relaxed text-foreground">
-                  {DATA_INFO_ITEMS.map((item) => (
-                    <li key={item.label} className="flex gap-3">
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                      <span>
-                        <strong className="font-semibold tracking-wide">
+              <div className="overflow-hidden rounded-2xl border bg-muted/20">
+                <table className="w-full border-collapse text-left text-sm">
+                  <thead className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                    <tr className="border-b">
+                      <th className="px-4 py-3 font-semibold text-foreground">Dataset</th>
+                      <th className="px-4 py-3 font-semibold text-foreground">Description</th>
+                      <th className="px-4 py-3 font-semibold text-foreground">Time Period</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DATA_INFO_ITEMS.map((item) => (
+                      <tr key={item.label} className="border-b last:border-b-0 align-top">
+                        <td className="px-4 py-3 font-semibold tracking-wide text-foreground">
                           {item.label}
-                        </strong>{" "}
-                        <span className="text-muted-foreground">— {item.description}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                        </td>
+                        <td className="px-4 py-3 leading-relaxed text-muted-foreground">
+                          {item.description}
+                        </td>
+                        <td className="px-4 py-3 leading-relaxed text-muted-foreground">
+                          {item.timePeriod}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </ScrollArea>
           </DialogContent>

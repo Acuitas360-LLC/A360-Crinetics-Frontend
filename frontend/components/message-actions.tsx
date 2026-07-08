@@ -1431,8 +1431,8 @@ export function PureMessageActions({
                                 KEY INSIGHT
                               </div>
                               <img
-                                alt="Geron logo"
-                                src="/images/geron_logo.png"
+                                alt="Crinetics logo"
+                                src="/images/Crinetics_logo.png"
                                 style={{
                                   position: "absolute",
                                   left: pctW(logoX),
