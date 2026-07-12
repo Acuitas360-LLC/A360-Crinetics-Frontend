@@ -96,37 +96,37 @@ const STARTER_QUESTION_CATEGORIES: readonly StarterCategory[] = [
 
 const DATA_INFO_ITEMS: readonly DataInfoItem[] = [
   {
-    label: "ENROLLMENTS",
+    label: "Enrollments",
     description:
       "Palsonify's patient enrollment data and corresponding HCP details, including the complete approval cycle of the patient at the transaction level.",
     timePeriod: "Updated through July 3, 2026",
   },
   {
-    label: "DISPENSE",
+    label: "Dispense",
     description:
       "Palsonify's drug dispense transactions, including fills, refills, and dosage details, from the specialty pharmacies (Biologics and Orsini) and Hub (IQVIA).",
     timePeriod: "Updated through July 3, 2026",
   },
   {
-    label: "SD_SHIPMENTS",
+    label: "SD Shipments",
     description:
       "Palsonify's specialty distributor shipment volumes by account.",
     timePeriod: "Updated through July 3, 2026",
   },
   {
-    label: "CALLS_DATA",
+    label: "Calls Data",
     description:
       "HCP call activity from the respective TSs and SAMs.",
     timePeriod: "Updated through July 3, 2026",
   },
   {
-    label: "HCP TARGET LIST",
+    label: "HCP Target List",
     description:
       "Highlights prioritized target HCPs for strategic commercial focus.",
     timePeriod: "As of Q2 2026",
   },
   {
-    label: "PARENT ACCOUNT TARGET LIST",
+    label: "Parent Account Target List",
     description:
       "List of parent accounts prioritized for strategic commercial focus.",
     timePeriod: "As of Q2 2026",
