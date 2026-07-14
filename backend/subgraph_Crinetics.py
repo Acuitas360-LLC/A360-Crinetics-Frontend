@@ -1024,7 +1024,7 @@ Enrollment Table Rules:
 
 Dispense Table Rules:    
 
-    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table, always display the following fields in the output: Parent ID, Parent Name, Activation Date, Top 63 Flag, Area, Region, Territory, LTD Start Date, LTD End Date
+    Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
 
 Cross Table Rules (ENROLLMENTS + Dispense):
@@ -1035,16 +1035,20 @@ Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
 
     Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never apply enrollment-based filters or conditions that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when enrollment-derived attributes are unavailable.
     Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth. 
+    Account Breadth, count unique accounts per geography — if an account maps to multiple geographies, count it once in each geography (do not collapse to a single geography via COALESCE, MIN, MAX, or similar tie-breaking). The same applies to Account Depth (enrollments / unique accounts per geography) — the denominator must also reflect this multi-geography membership. Apply geography-based filtering/grouping only when the query explicitly requires it by geography.
     Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
 
 Cross Tables Rules (Dispense + SD_SHIPMENTS):
     Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
     Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
     Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+    Total Dispenses Calculation Rule (Mandatory):
+        Total Dispenses must always be calculated as the sum of:
+        bottles_dispensed from the Dispense table, plus
+        number_of_bottles from the SD_Shipments table
 
-Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Paarent_Marketting_Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's parent_marketting_target list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts from parent_marketting_target minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
 
 CALL_TABLE USAGE INSTRUCTIONS:
     This table is the primary source for all queries related to calls, reach, call frequency, and effort.
@@ -1234,15 +1238,19 @@ Default Rules:
     For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
     Always accompany any growth metric or percentage value with the corresponding absolute volume value.
     Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient_id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
     Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
     Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
     Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    Geography (region, area, territory, city, zip) for parent accounts must always be sourced strictly from parent_marketing_target — never inferred or derived from any other table.
     In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
-    
+    For any Year-to-Date (YTD) calculation, the first week's start date must always be anchored to January 1st of the relevant year — never derived from the preceding week's end date or any other offset. All subsequent week boundaries follow normally from that anchor.
+    For HCP-related attributes not tied to enrollments, dispense, or calls (e.g., number_of_treated_patients/potential, affiliated parent name, region, geography, tier, top_63 status, speciality), source the data from the marketing_target table.
+
 
 Time period Rules:
     LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    STRICT FORMAT RULE — date labels: month_year (VARCHAR) must be "YYYY-MM" (e.g., "2025-01"); quarter_year (VARCHAR) must be "YYYY-Q#" (e.g., "2025-Q4"); year (VARCHAR) must be "YYYY" (e.g., "2025"). No exceptions, no alternate formats (e.g., "Jan-25", "Q4 2025", "FY25"). Always output exactly as specified.
     The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
     If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
     For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
@@ -1340,8 +1348,6 @@ Time period Rules:
 
     Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
 
-TABLE SCHEMA:
-
 Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
@@ -1356,7 +1362,6 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -1381,8 +1386,7 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+
 
 Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
@@ -1393,6 +1397,8 @@ Table: marketting_target — Prioritized target HCP's for strategic commercial f
 - territory (VARCHAR): Sales territory name.
 - pod (VARCHAR): sales pod name
 - area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
 - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
@@ -1419,7 +1425,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -1435,10 +1443,13 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
 - year (VARCHAR): year label  (e.g., 2025)
+
 
 Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
 
@@ -1473,6 +1484,7 @@ Table: calls_data — sales interaction dataset (call-level, time-aligned)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
 - year (VARCHAR): year label (2026)
+
 
     ────────────────────────
     DATE & TIME LOGIC RULES
@@ -1628,9 +1640,10 @@ USER QUERY (LATEST HUMAN MESSAGE)
     - Preserve correct logic from previous decompositions
     
 
-    ────────────────────────
+────────────────────────
     Metric & Output Handling Rules (Must Always Be Enforced):
-    ────────────────────────
+────────────────────────
+
 Enrollment Table Rules:
     
     For calculating number of enrollments always anchor to crinetics_id -> count(crinetics_id).
@@ -1644,7 +1657,7 @@ Enrollment Table Rules:
 
 Dispense Table Rules:    
 
-    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
+    Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
 
 Cross Table Rules (ENROLLMENTS + Dispense):
@@ -1653,18 +1666,22 @@ Cross Table Rules (ENROLLMENTS + Dispense):
 
 Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
 
-    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
+    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never apply enrollment-based filters or conditions that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when enrollment-derived attributes are unavailable.
     Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.
+    Account Breadth, count unique accounts per geography — if an account maps to multiple geographies, count it once in each geography (do not collapse to a single geography via COALESCE, MIN, MAX, or similar tie-breaking). The same applies to Account Depth (enrollments / unique accounts per geography) — the denominator must also reflect this multi-geography membership. Apply geography-based filtering/grouping only when the query explicitly requires it by geography.
     Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
 
 Cross Tables Rules (Dispense + SD_SHIPMENTS):
     Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
     Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
     Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+    Total Dispenses Calculation Rule (Mandatory):
+        Total Dispenses must always be calculated as the sum of:
+        bottles_dispensed from the Dispense table, plus
+        number_of_bottles from the SD_Shipments table
 
-Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Paarent_Marketting_Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's parent_marketting_target list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts from parent_marketting_target minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
 
 CALL_TABLE USAGE INSTRUCTIONS:
     This table is the primary source for all queries related to calls, reach, call frequency, and effort.
@@ -1854,15 +1871,19 @@ Default Rules:
     For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
     Always accompany any growth metric or percentage value with the corresponding absolute volume value.
     Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient_id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
     Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
     Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
     Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    Geography (region, area, territory, city, zip) for parent accounts must always be sourced strictly from parent_marketing_target — never inferred or derived from any other table.
     In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
+    For any Year-to-Date (YTD) calculation, the first week's start date must always be anchored to January 1st of the relevant year — never derived from the preceding week's end date or any other offset. All subsequent week boundaries follow normally from that anchor.
+    For HCP-related attributes not tied to enrollments, dispense, or calls (e.g., number_of_treated_patients/potential, affiliated parent name, region, geography, tier, top_63 status, speciality), source the data from the marketing_target table.
     
 
 Time period Rules:
     LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    STRICT FORMAT RULE — date labels: month_year (VARCHAR) must be "YYYY-MM" (e.g., "2025-01"); quarter_year (VARCHAR) must be "YYYY-Q#" (e.g., "2025-Q4"); year (VARCHAR) must be "YYYY" (e.g., "2025"). No exceptions, no alternate formats (e.g., "Jan-25", "Q4 2025", "FY25"). Always output exactly as specified.
     The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
     If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
     For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
@@ -1961,8 +1982,6 @@ Time period Rules:
     Do not automatically restrict calculations to the **most recent completed period** unless the user explicitly requests it.
 
 
-TABLE SCHEMA:
-
 Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
@@ -1977,7 +1996,6 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -2002,8 +2020,7 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
+
 
 Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
@@ -2014,6 +2031,8 @@ Table: marketting_target — Prioritized target HCP's for strategic commercial f
 - territory (VARCHAR): Sales territory name.
 - pod (VARCHAR): sales pod name
 - area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
 - tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
@@ -2040,7 +2059,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -2056,10 +2077,30 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
 - year (VARCHAR): year label  (e.g., 2025)
+
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
 
 Table: calls_data — sales interaction dataset (call-level, time-aligned)
 - crinetics_id (VARCHAR): unique identifier for each sales call
@@ -2299,27 +2340,31 @@ Enrollment Table Rules:
 
 Dispense Table Rules:    
 
-    Total dispenses must always be calculated by summing the values in bottles_dispensed from Dispense Table
+    Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
-    
+
 Cross Table Rules (ENROLLMENTS + Dispense):
 
     Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
 
 Cross Tables Rules (ENROLLMENTS + SD_SHIPMENTS):
 
-    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never filter or reduce the union population using enrollment-derived fields, including activation flags, activation dates, enrollment counts, enrollment evidence counts, enrollment existence checks, INNER JOINs, or IS NOT NULL conditions. Use LEFT JOINs for enrichment and COALESCE to populate attributes from ENROLLMENTS first, then SD_SHIPMENTS. The final result must contain every parent_id in the union population.
+    Top 63 Accounts Rule: Define the Top 63 population as the UNION of distinct parent_id values from ENROLLMENTS (type_flag = 'Top 63 (PTC)') and SD_SHIPMENTS (top63_flag = 'Y'). Preserve all accounts in this union and return exactly one row per parent_id. Never apply enrollment-based filters or conditions that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when enrollment-derived attributes are unavailable.
     Any query at the account level must include entries from both ENROLLMENTS and SD_SHIPMENTS. Define the full account population as the UNION of distinct parent_id values from ENROLLMENTS and SD_SHIPMENTS. Preserve all accounts in this union and return exactly one row per parent_id. Never apply source-specific filters (e.g., enrollment-only or shipment-only conditions) that reduce the union population. Use LEFT JOINs and COALESCE for attribute enrichment, and return NULL when attributes are unavailable from either source.
-    Account Breadth = Number of Unique Accounts. Account Depth = Number of Enrollments ÷ Number of Unique Accounts. Apply these definitions consistently whenever a query references account breadth or depth.    
+    Account Breadth, count unique accounts per geography — if an account maps to multiple geographies, count it once in each geography (do not collapse to a single geography via COALESCE, MIN, MAX, or similar tie-breaking). The same applies to Account Depth (enrollments / unique accounts per geography) — the denominator must also reflect this multi-geography membership. Apply geography-based filtering/grouping only when the query explicitly requires it by geography.
     Parent accounts activated = COUNT(DISTINCT parent_id) from the UNION of ENROLLMENT and SD_SHIPMENTS. Never filter this union down using enrollment-based conditions. Enrich via LEFT JOIN + COALESCE only — return NULL for unavailable attributes, never drop rows. No exceptions.
-    
+
 Cross Tables Rules (Dispense + SD_SHIPMENTS):
     Dispense contribution = always sum bottles_dispensed from BOTH `dispense` and `sd_shipments` tables, never one alone, then report % share of each against their combined total.
     Always calculate bottles dispensed (and dispense growth) using the combined total from **both** the `Dispense` table and the `sd_shipments` table — never from just one alone.
     Always use both SD_Shipments and Dispenses datasets together when computing any split of dispenses — never one alone.
+    Total Dispenses Calculation Rule (Mandatory):
+        Total Dispenses must always be calculated as the sum of:
+        bottles_dispensed from the Dispense table, plus
+        number_of_bottles from the SD_Shipments table
 
-Cross Tables Rules (Enrollments + SD_SHIPMENTS + Marketting Target)
-    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's target/master list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Paarent_Marketting_Target)
+    To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's parent_marketting_target list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts from parent_marketting_target minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
 
 CALL_TABLE USAGE INSTRUCTIONS:
     This table is the primary source for all queries related to calls, reach, call frequency, and effort.
@@ -2509,15 +2554,19 @@ Default Rules:
     For growth metrics, if the previous period value is 0 and the current period value is greater than 0, the growth must be reported as 100%.
     Always accompany any growth metric or percentage value with the corresponding absolute volume value.
     Whenever the query references “nation,” compute the national-level metrics and include them in the output.
-    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient__id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
+    Always perform aggregations using ID fields (e.g., child_id, parent_id, crinetiics_id, hub_patient_id, region_id, territory_id) for accuracy, and include the corresponding names in the final output.
     Whenever a user asks about performance, always calculate and include the growth (percentage change vs the previous comparable period)
     Whenever growth is calculated for any segmentation level (e.g., segment, tier, region, area, geography, account type, city, state, or territory), also calculate nation growth and add a column indicating whether the segment is performing Higher or Lower than the nation.
     Whenever a query involves a trend, you must always display the cumulative sum alongside it.
+    Geography (region, area, territory, city, zip) for parent accounts must always be sourced strictly from parent_marketing_target — never inferred or derived from any other table.
     In tier, always group Non ENDOs with Discontinued Patients, ENDOs with Acro Diagnosed Patients, ENDOs with No Intelligence, Non ENDOs with Acro Diagnosed Patients, and ENDOs with Discontinued Patients into Non - Target. Keep Tier 1, Tier 2, Tier 3, Tier 4 as-is.
-    
+    For any Year-to-Date (YTD) calculation, the first week's start date must always be anchored to January 1st of the relevant year — never derived from the preceding week's end date or any other offset. All subsequent week boundaries follow normally from that anchor.
+    For HCP-related attributes not tied to enrollments, dispense, or calls (e.g., number_of_treated_patients/potential, affiliated parent name, region, geography, tier, top_63 status, speciality), source the data from the marketing_target table.
+
 
 Time period Rules:
     LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    STRICT FORMAT RULE — date labels: month_year (VARCHAR) must be "YYYY-MM" (e.g., "2025-01"); quarter_year (VARCHAR) must be "YYYY-Q#" (e.g., "2025-Q4"); year (VARCHAR) must be "YYYY" (e.g., "2025"). No exceptions, no alternate formats (e.g., "Jan-25", "Q4 2025", "FY25"). Always output exactly as specified.
     The table contains week_end_date, month_year, and quarter_year. Use week_end_date for weekly calculations. 
     If the user does not specify a time period, default to the quarter to date data anchor to recent quarter_year for the calculation.
     For a specific month or quarter queries, filter using `month_year` or `quarter_year` respectively.
@@ -2651,8 +2700,6 @@ No additional text.
 {query_decomposer_output}
 
 
-TABLE SCHEMA:
-
 Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
@@ -2667,7 +2714,6 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -2692,10 +2738,9 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-Table: marketting_target — Prioritized target HCp's for strategic commercial focus.
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
 - npi (NUMBER): National Provider Identifier (HCP unique ID).
 - sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
@@ -2704,8 +2749,10 @@ Table: marketting_target — Prioritized target HCp's for strategic commercial f
 - territory (VARCHAR): Sales territory name.
 - pod (VARCHAR): sales pod name
 - area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
 - parent_name (VARCHAR): Name of the parent account or health system.
 - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
@@ -2730,7 +2777,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -2746,11 +2795,30 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
 - year (VARCHAR): year label  (e.g., 2025)
 
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
 
 Table: calls_data — sales interaction dataset (call-level, time-aligned)
 - crinetics_id (VARCHAR): unique identifier for each sales call
@@ -2892,8 +2960,6 @@ Human feedback (if any):
 {human_feedback}
 If human feedback is provided, treat it as a strict constraint and prioritize it during evaluation.
 
-TABLE SCHEMA:
-
 Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
@@ -2908,7 +2974,6 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -2933,10 +2998,9 @@ Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transactio
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-Table: marketting_target — Prioritized target HCp's for strategic commercial focus.
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
 - npi (NUMBER): National Provider Identifier (HCP unique ID).
 - sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
@@ -2945,8 +3009,10 @@ Table: marketting_target — Prioritized target HCp's for strategic commercial f
 - territory (VARCHAR): Sales territory name.
 - pod (VARCHAR): sales pod name
 - area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
 - parent_name (VARCHAR): Name of the parent account or health system.
 - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
@@ -2971,7 +3037,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -2987,10 +3055,30 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
 - year (VARCHAR): year label  (e.g., 2025)
+
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
 
 Table: calls_data — sales interaction dataset (call-level, time-aligned)
 - crinetics_id (VARCHAR): unique identifier for each sales call
@@ -3736,9 +3824,7 @@ with the same or less knowledge.
 
 Note: If the result set is empty, replace all sections with a single "No Results" section describing what was searched and what the absence means.
 
-TABLE SCHEMA:
-
-Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
 - payer_name (VARCHAR): payer or insurance provider name
@@ -3752,7 +3838,6 @@ Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP eng
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -3777,17 +3862,21 @@ Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP eng
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
 - npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
 - hcp_name (VARCHAR): Healthcare provider name.
 - region (VARCHAR): Sales or operational region.
 - territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
 - parent_name (VARCHAR): Name of the parent account or health system.
 - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
@@ -3812,7 +3901,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -3828,10 +3919,48 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
-- year (VARCHAR): year label  (e.g., 2025)        
+- year (VARCHAR): year label  (e.g., 2025)
+
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
+
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
+    
 
     """
     response=model.invoke(prompt).content
@@ -4223,9 +4352,7 @@ Rule 17: RULE 17 — LEGEND PLACEMENT (UPDATED): Always position the legend belo
 
 
 
-TABLE SCHEMA:
-
-Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
+Table: ENROLLMENTS — patient enrollment and HCP engagement dataset (transaction-level + territory/HCP analysis)
 - transaction_date (DATE): enrollment transaction date (YYYY-MM-DD)
 - patient_enrollment_type (VARCHAR): type of patient enrollment (Values: Open Label Extension (OLE), Enrollment)
 - payer_name (VARCHAR): payer or insurance provider name
@@ -4239,7 +4366,6 @@ Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP eng
 - primary_speciality (VARCHAR): primary medical specialty of HCP
 - parent_name (VARCHAR): parent account or organization name
 - type_flag (VARCHAR): account or enrollment type indicator (Values: Top 63 (PTC), Non PTC)
-- acro_treated_patients_in_recent_24_months_parent_account_level (NUMBER): count of acromegaly-treated patients at parent account level in the last 24 months
 - state (VARCHAR): HCP or account state
 - zip (NUMBER): ZIP/postal code
 - region (VARCHAR): sales or operational region
@@ -4264,17 +4390,21 @@ Table: PALSONIFY.PALSONIFY_SCHEMA.ENROLLMENTS — patient enrollment and HCP eng
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - year (VARCHAR): year label  (e.g., 2025)
-- l3w_flag (NUMBER): last 3 weeks indicator flag (0,1)
-- qtd_flag (NUMBER): quarter-to-date indicator flag (0,1)
 
-Table: marketting_target — Prioritized target accounts and campuses for strategic commercial focus.
+
+Table: marketting_target — Prioritized target HCP's for strategic commercial focus.
 
 - npi (NUMBER): National Provider Identifier (HCP unique ID).
+- sam_focus (VARCHAR): flag whether the geography is sam focused or not (Y,N)
 - hcp_name (VARCHAR): Healthcare provider name.
 - region (VARCHAR): Sales or operational region.
 - territory (VARCHAR): Sales territory name.
+- pod (VARCHAR): sales pod name
+- area (VARCHAR): sales area/division
+- speciality_group (VARCHAR): HCP's speciality (e.g. PCP, ENDOCRINOLOGY, NEUROLOGY)
+- hcp_address (VARCHAR): HCP Address
 - number_of_treated_patients (NUMBER): Count of unique patients who have received treatment from the healthcare provider (HCP).
-- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, etc).
 - parent_id (VARCHAR): Unique identifier of the parent account or health system.
 - parent_name (VARCHAR): Name of the parent account or health system.
 - child_id (VARCHAR): Unique identifier of the child account, facility, or campus.
@@ -4299,7 +4429,9 @@ Table SD_SHIPMENTS - Shipments from Specialty Distributor
 - number_of_bottles (NUMBER): number of bottles dispensed
 - dosage (VARCHAR): (values: 40 mg, 60 mg)
 - address (VARCHAR): Parent Account Address
+- claim_type (VARCHAR): claim classification values(Paid and Quick Start)
 - top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+
 
 
 Table Dispense - Drug Dispense Data
@@ -4315,10 +4447,48 @@ Table Dispense - Drug Dispense Data
 - run_count_number (NUMBER): Numeric representation of the dispense sequence for a patient. Typically 1 represents the first fill, 2 the first refill, 3 the second refill, and so on.
 - npi (NUMBER): National Provider Identifier (HCP unique ID)
 - enrollment_date (DATE): Date the patient enrolled in the drug support program or therapy (YYYY-MM-DD).
+- tier (VARCHAR): HCP or account tier classification (Values: Tier 1, Tier 2, Tier 3, Tier 4, N)
+- top63_flag (VARCHAR): Indicates whether the account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
 - week_end_date (DATE): week ending Friday (YYYY-MM-DD)
 - month_year (VARCHAR): month label (e.g., 2025-01)
 - quarter_year (VARCHAR): quarter label (e.g. 2025-Q4)
 - year (VARCHAR): year label  (e.g., 2025)
+
+
+Table: parent_marketting_target — Parent account-level view of prioritized target health systems for strategic commercial focus.
+
+- region (VARCHAR): Sales or operational region.
+- area (VARCHAR): Sales or operational area (sub-division of region).
+- territory (VARCHAR): Sales territory name.
+- top63_flag (VARCHAR): Indicates whether the parent account belongs to the Top 63 strategic target accounts (Y = Yes, N = No).
+- ptc_flag (VARCHAR): Indicates whether the parent account is designated as a PTC target account (Y = Yes, N = No).
+- sam_focus (VARCHAR): Indicates whether the parent account is a designated Strategic Account Management (SAM) focus account (Y = Yes, N = No).
+- account_priority_group (VARCHAR): Priority group/tier classification assigned to the parent account for targeting purposes.
+- parent_id (VARCHAR): Unique identifier of the parent account or health system.
+- parent_name (VARCHAR): Name of the parent account or health system.
+- acro_treated_patients_in_recent_24_months (NUMBER): Count of unique acromegaly patients treated across the parent account's affiliated providers/facilities in the most recent 24 months.
+- parent_address (VARCHAR): Street address of the parent account.
+- parent_city (VARCHAR): City in which the parent account is located.
+- parent_state (VARCHAR): State in which the parent account is located.
+- parent_zip (VARCHAR): ZIP/postal code of the parent account.
+
+Table: calls_data — sales interaction dataset (call-level, time-aligned)
+- crinetics_id (VARCHAR): unique identifier for each sales call
+- call_date (DATE): date of the sales interaction (YYYY-MM-DD)
+- event (VARCHAR): engagement type (HCO Call, HCP Call)
+- channel (VARCHAR): metric classification/type of record (Phone, Email, Face To Face, Video)
+- npi (VARCHAR): healthcare professional identifier (NPI)
+- hcp_name (VARCHAR): Name of the HCP
+- call_stamped_territory_area (VARCHAR): area / territory of the HCP.
+- geo_type (VARCHAR): Flag to determine whether the geography is area or territory (Territory, Area)
+- tier (VARCHAR): tier (Tier 1, Tier 2, Tier 3, Tier 4, N)
+- pod (VARCHAR): pod name
+- region (VARCHAR): region (Central, Great Lakes, North East, etc)
+- week_end_date (DATE): week ending Friday
+- month_year (VARCHAR): month label (e.g., 2025-01)
+- quarter_year (VARCHAR): quarter label (e.g., 2025-Q1)
+- year (VARCHAR): year label (2026)
+
 
 ## FAIL-SAFE (IMPORTANT)
 
