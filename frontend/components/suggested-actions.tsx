@@ -99,25 +99,25 @@ const DATA_INFO_ITEMS: readonly DataInfoItem[] = [
     label: "Enrollments",
     description:
       "Palsonify's patient enrollment data and corresponding HCP details, including the complete approval cycle of the patient at the transaction level.",
-    timePeriod: "Updated through July 3, 2026",
+    timePeriod: "Updated through July 10, 2026",
   },
   {
     label: "Dispense",
     description:
       "Palsonify's drug dispense transactions, including fills, refills, and dosage details, from the specialty pharmacies (Biologics and Orsini) and Hub (IQVIA).",
-    timePeriod: "Updated through July 3, 2026",
+    timePeriod: "Updated through July 10, 2026",
   },
   {
     label: "SD Shipments",
     description:
       "Palsonify's specialty distributor shipment volumes by account.",
-    timePeriod: "Updated through July 3, 2026",
+    timePeriod: "Updated through July 10, 2026",
   },
   {
     label: "Calls Data",
     description:
       "HCP call activity from the respective TSs and SAMs.",
-    timePeriod: "Updated through July 3, 2026",
+    timePeriod: "Updated through July 10, 2026",
   },
   {
     label: "HCP Target List",
