@@ -949,7 +949,7 @@ RULES
 
 def query_decomposer_node(state: AgentState):
     review = state["active_review"]
-    user_input=state["question"]
+    
     messages=state['messages']
     query_decomposer_rag_examples_text=state['query_decomposer_rag_examples_text']
     
@@ -958,7 +958,11 @@ def query_decomposer_node(state: AgentState):
     msg for msg in reversed(messages) if isinstance(msg, HumanMessage)
 )
     user_input=last_human_message.content
-    print("Last Human Message")
+    human_message=last_human_message.content
+    print("Human Message:")
+    print(human_message)
+    user_input=state["question"]
+    print("Corrected Query:")
     print(user_input)
     print("-"*100)
     if review and (review["decision"] == "REJECT"):
@@ -1027,6 +1031,9 @@ Dispense Table Rules:
     Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
 
+SD_SHIPMENTS Rules: 
+    Account-level dispense queries must always anchor to SD_Shipments, never Dispense, unless explicitly told otherwise.
+
 Cross Table Rules (ENROLLMENTS + Dispense):
 
     Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
@@ -1063,6 +1070,7 @@ CALL_TABLE USAGE INSTRUCTIONS:
             To filter for Territory-level data, set geo_type = 'Territory'.
             To filter for Area-level data, set geo_type = 'Area'.
         Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+        "Interaction Type" and "Channel" refer to the same field.
 
 Query Handling Rules:
 
@@ -1660,6 +1668,9 @@ Dispense Table Rules:
     Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
 
+SD_SHIPMENTS Rules: 
+    Account-level dispense queries must always anchor to SD_Shipments, never Dispense, unless explicitly told otherwise.
+
 Cross Table Rules (ENROLLMENTS + Dispense):
 
     Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
@@ -1696,6 +1707,7 @@ CALL_TABLE USAGE INSTRUCTIONS:
             To filter for Territory-level data, set geo_type = 'Territory'.
             To filter for Area-level data, set geo_type = 'Area'.
         Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+        "Interaction Type" and "Channel" refer to the same field.
 
 Query Handling Rules:
 
@@ -2343,6 +2355,9 @@ Dispense Table Rules:
     Any query related to patient dispenses must always be anchored to the Dispense table as the primary source.
     Refill Rate: Using crinetics_id as the anchor key within the Dispense table, determine how many patients who received a First Fill subsequently received at least one Refill, defaulting to a Life To Date (LTD) time period unless otherwise specified.
 
+SD_SHIPMENTS Rules: 
+    Account-level dispense queries must always anchor to SD_Shipments, never Dispense, unless explicitly told otherwise.
+    
 Cross Table Rules (ENROLLMENTS + Dispense):
 
     Fill Rate: Using crinetics_id as the anchor key between the Enrollment and Dispense tables, determine how many enrolled patients received at least one dispense, defaulting to a Life To Date (LTD) time period unless otherwise specified.    
@@ -2363,7 +2378,7 @@ Cross Tables Rules (Dispense + SD_SHIPMENTS):
         bottles_dispensed from the Dispense table, plus
         number_of_bottles from the SD_Shipments table
 
-Cross Tables Rules (Enrollments + SD_SHIPMENTS + Paarent_Marketting_Target)
+Cross Tables Rules (Enrollments + SD_SHIPMENTS + Parent_Marketting_Target)
     To find any account segment (Top 63 or otherwise) not yet activated, anchor to the segment's parent_marketting_target list table plus ENROLLMENTS and SD_SHIPMENTS. Build the activated-accounts set as the union of parent_ids from ENROLLMENTS and SD_SHIPMENTS, then take the set difference: target list accounts from parent_marketting_target minus activated accounts. The remainder is the not-yet-activated list/count. Never compute this using only one or two of the three tables, and never substitute a different table for the segment's target/master list.
 
 CALL_TABLE USAGE INSTRUCTIONS:
@@ -2373,12 +2388,14 @@ CALL_TABLE USAGE INSTRUCTIONS:
         For any query involving calls, call frequency, or call effort, filter channel to include only Face To Face, Phone, and Video — exclude Email by default.
         Only include Email if:
             The user explicitly asks to include it, or
-            The query involves grouping/breakdown by channel_type (e.g., "show calls by channel type"), in which case include all 4 values.
+            The query involves grouping/breakdown by channel (e.g., "show calls by channel type"), in which case include all 4 values.
 
         The column call_stamped_territory_area contains values for both Territory and Area — the geo_type column determines which one a row represents.
             To filter for Territory-level data, set geo_type = 'Territory'.
             To filter for Area-level data, set geo_type = 'Area'.
         Never filter call_stamped_territory_area alone without also constraining geo_type, since the same column holds mixed granularities and an unfiltered geo_type will mix Territory and Area values together.
+        "Interaction Type" and "Channel" refer to the same field.
+
 
 Query Handling Rules:
 

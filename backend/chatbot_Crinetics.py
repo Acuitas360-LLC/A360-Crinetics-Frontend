@@ -38,30 +38,27 @@ SNOWFLAKE_CONFIG = {
 MASKING_TABLE_DICT = {}
 
 def load_masking_table(table_name: str = "MASK_MAPPING") -> dict:
-    """
-    Loads the masking table from Snowflake and converts it into:
-    {
-        "territory_name": ["North Territory", "South Territory", ...],
-        "state_name":     ["Telangana", "Maharashtra", ...],
-        "city_name":      ["Hyderabad", "Mumbai", ...],
-        ...
-    }
-    """
     global MASKING_TABLE_DICT
 
+    conn = None
+    cursor = None
     try:
-        conn   = snowflake.connector.connect(**SNOWFLAKE_CONFIG)
+        conn   = snowflake.connector.connect( 
+            user="ahusain",
+            password="Murtaza@40401059",
+            account="ua60309.south-central-us.azure",
+            warehouse="PALSONIFY_COMPUTE",
+            database="PALSONIFY",
+            schema="PALSONIFY_SCHEMA")
         cursor = conn.cursor()
 
         cursor.execute(f"SELECT column_name, original_value FROM {table_name}")
         rows = cursor.fetchall()
 
-        # Build dictionary — group original_values under each column_name
         result = defaultdict(list)
         for column_name, original_value in rows:
             result[column_name].append(original_value)
 
-        # Convert to regular dict and store globally
         MASKING_TABLE_DICT = dict(result)
 
         print(f"✅ Masking table loaded: {len(MASKING_TABLE_DICT)} columns, "
@@ -72,8 +69,10 @@ def load_masking_table(table_name: str = "MASK_MAPPING") -> dict:
         raise
 
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
     return MASKING_TABLE_DICT
 
@@ -82,11 +81,12 @@ COLUMN_FALLBACK_ORDER = [
     "region",
     "area",
     "territory", 
-    "parent_name"
+    "parent_name",
+    "hcp_name"
     # add more columns in priority order as needed
 ]
 
-def fallback_column_search(entity_value, masking_table, threshold=70):
+def fallback_column_search(entity_value, masking_table, threshold=75):
     """
     When column_name is unknown, try each column in priority order.
     Returns first confident match found.
@@ -113,12 +113,15 @@ def extract_entities_from_query(user_query, valid_columns):
 
     Return ONLY a JSON array like:
     [
-        {{"column_name": "state_name", "entity_value": "Telangana"}},
-        {{"column_name": null,         "entity_value": "Sttle"}}
+        {{"column_name": "area", "entity_value": "Mid Atlantic"}},
+        {{"column_name": null,         "entity_value": "Sttle"}},
+        {{"column_name": "region", "entity_value": "Northeast"}},
+        {{"column_name": "hcp_name",         "entity_value": "Peter Snyder"}}
     ]
 
     Rules:
-    - Only if in the Query it is expliciittly mentioned mentioned about the column_name then only take that as a column name or else mark it as null (VERY IMPORTANT). For Exxample west region, then onlyy consider westt to be region if nothing is mention cconsider it to be null.
+    - The following are the time periods never ever consider them as entity values: LTD = Launch to Date; YTD = Year to Date; MTD = Month to Date; QTD = Quarter to Date.
+    - Only if in the Query it is expliciittly mentioned mentioned about the column_name then only take that as a column name or else mark it as null (VERY IMPORTANT). For Exxample west region, then only consider west to be region if nothing is mention cconsider it to be null.
     - column_name must always be one of the available columns listed above, or null if unsure
     - Extract as many entities as present in the query
     - Don't add any prefix or suffix to the entity name
@@ -140,8 +143,8 @@ def extract_entities_from_query(user_query, valid_columns):
 # ---------- Step 2: Fuzzy match a single entity ----------
 def fuzzy_correct(column_name, entity_value, masking_table, threshold=70):
     valid_values = masking_table.get(column_name, [])
-    print("Valid Values")
-    print(valid_values)
+    # print("Valid Values")
+    # print(valid_values)
 
     if not valid_values:
         return entity_value, None, "unknown_column"
@@ -867,8 +870,8 @@ def build_chatbot(checkpointer):
 
     def chat_node(state: ChatState, config):
         messages = state["messages"]
-        #query=process_user_query(messages[-1].content)
-        query=(messages[-1].content)
+        query=process_user_query(messages[-1].content)
+        #query=(messages[-1].content)
         print("Corrected Query")
         print(query)
         intent=get_intent_summary(query)

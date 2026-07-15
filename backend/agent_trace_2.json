@@ -5932,5 +5932,109 @@
         "text": "plot_df = df.copy()\nplot_df.columns = [c.upper() for c in plot_df.columns]\nplot_df[\"REACH_QTD_NUM\"] = plot_df[\"REACH_QTD\"].astype(str).str.replace(\"%\", \"\", regex=False).astype(float)\nplot_df = plot_df.sort_values([\"REACH_QTD_NUM\", \"REGION\"], ascending=[False, True])\n\nimport plotly.express as px\n\nfig = px.bar(\n    plot_df,\n    x=\"REGION\",\n    y=\"REACH_QTD_NUM\",\n    text=\"REACH_QTD\",\n    color=\"REGION\",\n    category_orders={\"REGION\": plot_df[\"REGION\"].tolist()},\n    labels={\"REGION\": \"Region\", \"REACH_QTD_NUM\": \"Reach QTD (%)\"},\n    title=f\"Reach Across Regions ({plot_df['PERIOD_START'].iloc[0]} to {plot_df['PERIOD_END'].iloc[0]})\"\n)\n\nfig.update_traces(\n    textposition=\"outside\",\n    cliponaxis=False,\n    hovertemplate=f\"Region=%{{x}}<br>Reach QTD=%{{text}}<br>Target HCPs QTD=%{{customdata[0]}}<br>Reached HCPs QTD=%{{customdata[1]}}<extra></extra>\",\n    customdata=plot_df[[\"TARGET_HCPS_QTD\", \"REACHED_HCPS_QTD\"]].to_numpy()\n)\n\nfig.update_layout(\n    width=900,\n    height=550,\n    margin=dict(t=100, r=60, b=140, l=70),\n    hovermode=\"closest\",\n    hoverlabel=dict(namelength=-1),\n    showlegend=True,\n    legend=dict(\n        orientation=\"h\",\n        yanchor=\"top\",\n        y=-0.2,\n        xanchor=\"center\",\n        x=0.5\n    ),\n    xaxis_title=\"Region\",\n    yaxis_title=\"Reach QTD (%)\"\n)\n\nfig.update_yaxes(range=[0, max(plot_df[\"REACH_QTD_NUM\"]) * 1.25], title_standoff=15)\nfig.update_xaxes(title_standoff=15)"
       }
     ]
+  },
+  {
+    "run_id": "2026-07-15T18:36:40.210178+00:00Z",
+    "question": "give me the enrollments for \"New York City\" in \"territory\" in ltd",
+    "trace": [
+      {
+        "agent": "query_decomposer",
+        "event_type": "TextMessage",
+        "text": "{\n  \"intent_summary\": \"Return the total number of enrollments for the territory named \\\"New York City\\\" in Launch to Date (LTD), using the ENROLLMENTS table and counting enrollments by crinetics_id, along with explicit LTD start and end date boundaries.\",\n  \"tables\": [\n    \"ENROLLMENTS\"\n  ],\n  \"filters\": [\n    {\n      \"column\": \"territory\",\n      \"operator\": \"=\",\n      \"value\": \"New York City\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \"between_derived_ltd_bounds\",\n      \"value\": \"derived:ltd_from_enrollments\"\n    }\n  ],\n  \"aggregations\": [\n    {\n      \"metric_name\": \"enrollments_ltd\",\n      \"function\": \"COUNT\",\n      \"column\": \"crinetics_id\",\n      \"group_level\": \"none\"\n    }\n  ],\n  \"subqueries\": [\n    {\n      \"name\": \"ltd_date_bounds\",\n      \"purpose\": \"Define Launch to Date boundaries for the ENROLLMENTS table.\",\n      \"logic\": \"Compute MIN(transaction_date) as ltd_start_date and MAX(transaction_date) as ltd_end_date from ENROLLMENTS.\"\n    }\n  ],\n  \"group_by\": [],\n  \"order_by\": [],\n  \"limit\": null,\n  \"final_output\": {\n    \"columns\": [\n      \"territory\",\n      \"ltd_start_date\",\n      \"ltd_end_date\",\n      \"enrollments_ltd\"\n    ],\n    \"row_granularity\": \"single_row\"\n  },\n  \"validation_rules\": [\n    \"Treat this request as a fresh standalone query because extracted context marks it as unrelated_to_history = true.\",\n    \"Use only the ENROLLMENTS table.\",\n    \"Interpret enrollments as COUNT(crinetics_id).\",\n    \"Filter territory exactly to 'New York City'.\",\n    \"Interpret LTD as Launch to Date using MIN(transaction_date) to MAX(transaction_date) from ENROLLMENTS.\",\n    \"Apply the LTD date bounds to transaction_date inclusively.\",\n    \"Return explicit time period boundary columns ltd_start_date and ltd_end_date in the output.\",\n    \"Do not group by any additional dimension because the user asked for enrollments for a single specified territory.\",\n    \"Return a single row for the requested territory.\",\n    \"Do not invent any columns, flags, or joins not present in the provided schema.\",\n    \"Surface extracted context warning internally: no prior conversation history was available, so no historical filters or entities should be reused.\"\n  ],\n  \"rag_alignment\": {\n    \"rag_provided\": true,\n    \"used_examples\": [\n      \"Example #3\"\n    ],\n    \"borrowed_patterns\": [\n      \"LTD boundary derivation using MIN(transaction_date) and MAX(transaction_date) from ENROLLMENTS\",\n      \"Enrollment metric anchored to COUNT(crinetics_id)\",\n      \"Including explicit LTD start and end date fields in the output\"\n    ],\n    \"differences_from_examples\": [\n      \"Example #3 is an HCP list grouped by npi, whereas this request is a single territory-filtered total with no grouping.\"\n    ]\n  }\n}"
+      },
+      {
+        "agent": "SQL_Generator",
+        "event_type": "TextMessage",
+        "text": "WITH ltd_date_bounds AS (\n    SELECT\n        MIN(transaction_date) AS ltd_start_date,\n        MAX(transaction_date) AS ltd_end_date\n    FROM ENROLLMENTS\n)\nSELECT\n    'New York City' AS territory,\n    b.ltd_start_date,\n    b.ltd_end_date,\n    COUNT(e.crinetics_id) AS enrollments_ltd\nFROM ENROLLMENTS e\nCROSS JOIN ltd_date_bounds b\nWHERE e.territory = 'New York City'\n  AND e.transaction_date BETWEEN b.ltd_start_date AND b.ltd_end_date\nGROUP BY\n    territory,\n    b.ltd_start_date,\n    b.ltd_end_date;"
+      },
+      {
+        "agent": "sql_reviewer",
+        "event_type": "TextMessage",
+        "text": "PASS\nFEEDBACK:\nPASS, SQL is safe and valid"
+      },
+      {
+        "agent": "visualization_node",
+        "event_type": "TextMessage",
+        "text": "NO_VISUALIZATION"
+      }
+    ]
+  },
+  {
+    "run_id": "2026-07-15T18:40:05.334213+00:00Z",
+    "question": "give me the enrollments for \"New York City\" in \"territory\" in Ltd",
+    "trace": [
+      {
+        "agent": "query_decomposer",
+        "event_type": "TextMessage",
+        "text": "{\n  \"intent_summary\": \"Return the enrollment count for the territory named \\\"New York City\\\" using the ENROLLMENTS table for Launch to Date (LTD), including explicit LTD start and end date boundaries.\",\n  \"tables\": [\n    \"ENROLLMENTS\"\n  ],\n  \"filters\": [\n    {\n      \"column\": \"territory\",\n      \"operator\": \"=\",\n      \"value\": \"New York City\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \"between\",\n      \"value\": \"derived:ltd_date_bounds\"\n    }\n  ],\n  \"aggregations\": [\n    {\n      \"metric_name\": \"enrollments_ltd\",\n      \"function\": \"COUNT\",\n      \"column\": \"crinetics_id\",\n      \"group_level\": \"none\"\n    }\n  ],\n  \"subqueries\": [\n    {\n      \"name\": \"ltd_date_bounds\",\n      \"purpose\": \"Define Launch to Date boundaries for the enrollments table.\",\n      \"logic\": \"Compute MIN(transaction_date) as ltd_start_date and MAX(transaction_date) as ltd_end_date from ENROLLMENTS.\"\n    }\n  ],\n  \"group_by\": [],\n  \"order_by\": [],\n  \"limit\": null,\n  \"final_output\": {\n    \"columns\": [\n      \"territory\",\n      \"ltd_start_date\",\n      \"ltd_end_date\",\n      \"enrollments_ltd\"\n    ],\n    \"row_granularity\": \"single_row\"\n  },\n  \"validation_rules\": [\n    \"Treat this as a standalone query and do not apply prior conversation context.\",\n    \"Use only the ENROLLMENTS table.\",\n    \"Interpret LTD as Launch to Date using MIN(transaction_date) to MAX(transaction_date) from ENROLLMENTS.\",\n    \"Filter territory exactly to 'New York City'.\",\n    \"Anchor enrollment counting to COUNT(crinetics_id).\",\n    \"Return explicit LTD period boundaries in the output as ltd_start_date and ltd_end_date.\",\n    \"Return a single aggregated row for the requested territory.\",\n    \"Do not infer or use any columns outside the provided schema.\",\n    \"Current question is not related to the previous conversation. Context from prior turns was not applied.\"\n  ],\n  \"rag_alignment\": {\n    \"rag_provided\": true,\n    \"used_examples\": [\n      \"Example #2\"\n    ],\n    \"borrowed_patterns\": [\n      \"LTD derived using MIN(transaction_date) and MAX(transaction_date) from ENROLLMENTS\",\n      \"COUNT(crinetics_id) as the enrollment metric\",\n      \"include explicit LTD boundary dates in final output\"\n    ],\n    \"differences_from_examples\": [\n      \"This request is for a single territory-level aggregate rather than a per-HCP list, so no HCP-level grouping or HCP output fields are included.\"\n    ]\n  }\n}"
+      },
+      {
+        "agent": "SQL_Generator",
+        "event_type": "TextMessage",
+        "text": "WITH ltd_date_bounds AS (\n    SELECT\n        MIN(transaction_date) AS ltd_start_date,\n        MAX(transaction_date) AS ltd_end_date\n    FROM ENROLLMENTS\n)\nSELECT\n    e.territory,\n    b.ltd_start_date,\n    b.ltd_end_date,\n    COUNT(e.crinetics_id) AS enrollments_ltd\nFROM ENROLLMENTS e\nCROSS JOIN ltd_date_bounds b\nWHERE e.territory = 'New York City'\n  AND e.transaction_date BETWEEN b.ltd_start_date AND b.ltd_end_date\nGROUP BY\n    e.territory,\n    b.ltd_start_date,\n    b.ltd_end_date;"
+      },
+      {
+        "agent": "sql_reviewer",
+        "event_type": "TextMessage",
+        "text": "PASS\nFEEDBACK:\nPASS, SQL is safe and valid"
+      },
+      {
+        "agent": "visualization_node",
+        "event_type": "TextMessage",
+        "text": "NO_VISUALIZATION"
+      }
+    ]
+  },
+  {
+    "run_id": "2026-07-15T18:42:34.654735+00:00Z",
+    "question": "give me the enrollments for \"New York City\" in \"territory\" in LTD",
+    "trace": [
+      {
+        "agent": "query_decomposer",
+        "event_type": "TextMessage",
+        "text": "{\n  \"intent_summary\": \"Calculate launch-to-date total enrollments for the territory named \\\"New York City\\\" by counting enrollment records in the ENROLLMENTS table, treating the request as a standalone query unrelated to prior conversation context.\",\n  \"tables\": [\n    \"ENROLLMENTS\"\n  ],\n  \"filters\": [\n    {\n      \"column\": \"territory\",\n      \"operator\": \"=\",\n      \"value\": \"New York City\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \">=\",\n      \"value\": \"derived:ltd_start_date\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \"<=\",\n      \"value\": \"derived:ltd_end_date\"\n    }\n  ],\n  \"aggregations\": [\n    {\n      \"metric_name\": \"enrollments_ltd\",\n      \"function\": \"COUNT\",\n      \"column\": \"crinetics_id\",\n      \"group_level\": \"none\"\n    }\n  ],\n  \"subqueries\": [\n    {\n      \"name\": \"ltd_date_bounds\",\n      \"purpose\": \"Determine the launch-to-date boundaries for the enrollments dataset.\",\n      \"logic\": \"Compute MIN(transaction_date) as ltd_start_date and MAX(transaction_date) as ltd_end_date from ENROLLMENTS. Filter records where transaction_date falls between these two dates inclusive.\"\n    }\n  ],\n  \"group_by\": [],\n  \"order_by\": [],\n  \"limit\": null,\n  \"final_output\": {\n    \"columns\": [\n      \"territory\",\n      \"ltd_start_date\",\n      \"ltd_end_date\",\n      \"enrollments_ltd\"\n    ],\n    \"row_granularity\": \"single_row\"\n  },\n  \"validation_rules\": [\n    \"Treat this question as unrelated to prior conversation context and do not carry forward any earlier entities, filters, or logic.\",\n    \"Use only the ENROLLMENTS table.\",\n    \"Interpret LTD as Launch to Date using MIN(transaction_date) to MAX(transaction_date) from ENROLLMENTS.\",\n    \"Count enrollments using COUNT(crinetics_id) per enrollment counting rule.\",\n    \"Filter territory exactly to 'New York City'.\",\n    \"Do not group results; return a single aggregated row.\",\n    \"Include explicit time period boundaries in the output: ltd_start_date and ltd_end_date.\",\n    \"Because the user specified the geography type as territory, apply the filter to the territory column only.\",\n    \"Do not invent city-specific columns or treat 'New York City' as a city filter.\"\n  ],\n  \"rag_alignment\": {\n    \"rag_provided\": true,\n    \"used_examples\": [\n      \"Example #2\"\n    ],\n    \"borrowed_patterns\": [\n      \"LTD decomposition using MIN(transaction_date) and MAX(transaction_date)\",\n      \"single-row COUNT(crinetics_id) enrollment metric\",\n      \"explicit inclusion of ltd_start_date and ltd_end_date in final output\"\n    ],\n    \"differences_from_examples\": [\n      \"Added a territory filter for 'New York City' because the current intent is geography-specific rather than status-specific.\"\n    ]\n  }\n}"
+      },
+      {
+        "agent": "SQL_Generator",
+        "event_type": "TextMessage",
+        "text": "WITH ltd_date_bounds AS (\n  SELECT\n    MIN(transaction_date) AS ltd_start_date,\n    MAX(transaction_date) AS ltd_end_date\n  FROM ENROLLMENTS\n)\nSELECT\n  'New York City' AS territory,\n  b.ltd_start_date,\n  b.ltd_end_date,\n  COUNT(e.crinetics_id) AS enrollments_ltd\nFROM ENROLLMENTS e\nCROSS JOIN ltd_date_bounds b\nWHERE e.territory = 'New York City'\n  AND e.transaction_date >= b.ltd_start_date\n  AND e.transaction_date <= b.ltd_end_date\nGROUP BY\n  'New York City',\n  b.ltd_start_date,\n  b.ltd_end_date;"
+      },
+      {
+        "agent": "sql_reviewer",
+        "event_type": "TextMessage",
+        "text": "PASS\nFEEDBACK:\nPASS, SQL is safe and valid"
+      },
+      {
+        "agent": "visualization_node",
+        "event_type": "TextMessage",
+        "text": "NO_VISUALIZATION"
+      }
+    ]
+  },
+  {
+    "run_id": "2026-07-15T18:42:51.454705+00:00Z",
+    "question": "give me the enrollments for \"New York City\" in \"territory\" in lTd",
+    "trace": [
+      {
+        "agent": "query_decomposer",
+        "event_type": "TextMessage",
+        "text": "{\n  \"intent_summary\": \"Calculate launch-to-date enrollments for the territory named \\\"New York City\\\" by counting enrollment records in the ENROLLMENTS table, returning the territory-level enrollment total with explicit LTD start and end dates.\",\n  \"tables\": [\n    \"ENROLLMENTS\"\n  ],\n  \"filters\": [\n    {\n      \"column\": \"territory\",\n      \"operator\": \"=\",\n      \"value\": \"New York City\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \">=\",\n      \"value\": \"derived:ltd_start_date\"\n    },\n    {\n      \"column\": \"transaction_date\",\n      \"operator\": \"<=\",\n      \"value\": \"derived:ltd_end_date\"\n    }\n  ],\n  \"aggregations\": [\n    {\n      \"metric_name\": \"enrollments_ltd\",\n      \"function\": \"COUNT\",\n      \"column\": \"crinetics_id\",\n      \"group_level\": \"territory\"\n    }\n  ],\n  \"subqueries\": [\n    {\n      \"name\": \"ltd_date_bounds\",\n      \"purpose\": \"Determine the launch-to-date boundaries for the enrollments dataset.\",\n      \"logic\": \"Compute MIN(transaction_date) as ltd_start_date and MAX(transaction_date) as ltd_end_date from ENROLLMENTS. Interpret LTD as Launch to Date and filter records between these two dates inclusive.\"\n    }\n  ],\n  \"group_by\": [\n    \"territory\"\n  ],\n  \"order_by\": [\n    {\n      \"column\": \"territory\",\n      \"direction\": \"ASC\"\n    }\n  ],\n  \"limit\": null,\n  \"final_output\": {\n    \"columns\": [\n      \"territory\",\n      \"ltd_start_date\",\n      \"ltd_end_date\",\n      \"enrollments_ltd\"\n    ],\n    \"row_granularity\": \"per_group\"\n  },\n  \"validation_rules\": [\n    \"Treat this as a standalone query because extracted context marks it unrelated_to_history = true.\",\n    \"Use only ENROLLMENTS.\",\n    \"Interpret \\\"LTD\\\" as Launch to Date using MIN(transaction_date) to MAX(transaction_date) from ENROLLMENTS.\",\n    \"Apply the territory filter exactly as territory = 'New York City'.\",\n    \"Count enrollments using COUNT(crinetics_id) per enrollment counting rule.\",\n    \"Because the user specified territory, group by territory and return one row for the matching territory if data exists.\",\n    \"Include explicit time period boundaries in the output: ltd_start_date and ltd_end_date.\",\n    \"Do not infer or use any columns outside the provided schema.\",\n    \"Do not convert the request into a list-enrollment query because the user asked for enrollments as a count, not record-level details.\",\n    \"Preserve exact case-insensitive business intent of LTD even though user typed 'lTd'.\"\n  ],\n  \"rag_alignment\": {\n    \"rag_provided\": true,\n    \"used_examples\": [\n      \"Example #2\"\n    ],\n    \"borrowed_patterns\": [\n      \"LTD interpretation using MIN(transaction_date) and MAX(transaction_date)\",\n      \"COUNT on crinetics_id for enrollment volume\",\n      \"include explicit LTD boundary dates in final output\"\n    ],\n    \"differences_from_examples\": [\n      \"Added territory filter and territory grouping because the user requested a specific territory rather than a national single-row discontinued-patient count.\",\n      \"No status filter applied because the user asked for all enrollments, not discontinued patients.\"\n    ]\n  }\n}"
+      },
+      {
+        "agent": "SQL_Generator",
+        "event_type": "TextMessage",
+        "text": "WITH ltd_date_bounds AS (\n  SELECT\n    MIN(transaction_date) AS ltd_start_date,\n    MAX(transaction_date) AS ltd_end_date\n  FROM ENROLLMENTS\n)\nSELECT\n  e.territory,\n  b.ltd_start_date,\n  b.ltd_end_date,\n  COUNT(e.crinetics_id) AS enrollments_ltd\nFROM ENROLLMENTS e\nCROSS JOIN ltd_date_bounds b\nWHERE e.territory = 'New York City'\n  AND e.transaction_date >= b.ltd_start_date\n  AND e.transaction_date <= b.ltd_end_date\nGROUP BY\n  e.territory,\n  b.ltd_start_date,\n  b.ltd_end_date\nORDER BY\n  e.territory ASC;"
+      },
+      {
+        "agent": "sql_reviewer",
+        "event_type": "TextMessage",
+        "text": "PASS\nFEEDBACK:\nPASS, SQL is safe and valid"
+      },
+      {
+        "agent": "visualization_node",
+        "event_type": "TextMessage",
+        "text": "NO_VISUALIZATION"
+      }
+    ]
   }
 ]
