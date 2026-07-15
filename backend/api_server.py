@@ -3716,11 +3716,12 @@ async def chat_stream(request: ChatRequest, raw_request: Request) -> StreamingRe
                 return
 
             cached_messages = _load_cached_messages(request.thread_id, current_user_id)
+            original_question = request.question if isinstance(request.question, str) else ""
+            displayed_question = original_question.strip() or corrected_question
             user_message = {
                 "id": str(uuid.uuid4()),
                 "role": "user",
-                "parts": [{"type": "text", "text": corrected_question}],
-                # corrected_question
+                "parts": [{"type": "text", "text": displayed_question}],
             }
             assistant_parts: list[dict[str, Any]] = [
                 {
