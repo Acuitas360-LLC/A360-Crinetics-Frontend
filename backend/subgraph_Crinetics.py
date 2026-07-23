@@ -18,6 +18,8 @@ from langchain_core.messages import SystemMessage
 import pandas as pd
 import snowflake.connector
 import requests
+from langchain_openai import AzureChatOpenAI
+from openai import AzureOpenAI
 
 TRACE_FILE = "agent_trace.json"
 # =========================
@@ -31,11 +33,25 @@ DB_CONFIG = {
     "database": "drug_db"
 }
 
-model=ChatOpenAI(model='gpt-5.4')
-model_1=ChatOpenAI(model='gpt-5.3-codex')
-model_2=ChatOpenAI(model='gpt-5-nano')
-# Access the key
-openai_api_key = os.getenv("OPENAI_API_KEY")
+
+model = AzureChatOpenAI(
+    azure_deployment="gpt-5.4",   # deployment name, not model name
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.getenv("AZURE_OPENAI_KEY"),
+    api_version="2025-04-01-preview",
+)
+
+client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_KEY"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version="2025-04-01-preview",
+)
+
+# model=ChatOpenAI(model='gpt-5.4')
+# model_1=ChatOpenAI(model='gpt-5.3-codex')
+# model_2=ChatOpenAI(model='gpt-5-nano')
+# # Access the key
+#openai_api_key = os.getenv("OPENAI_API_KEY")
 _mask_map   = {}   # original → masked
 _demask_map = {}   # masked   → original  (inverted _mask_map)
 
@@ -2859,7 +2875,12 @@ Table: calls_data — sales interaction dataset (call-level, time-aligned)
 
     """
 
-    response = model_1.invoke(prompt).content[0]["text"]
+    #response = model_1.invoke(prompt).content[0]["text"]
+    model_1 = client.responses.create(
+            model="gpt-5.3-codex",
+            input=prompt
+        )
+    response=model_1.output_text
     print("SQL Generator Response")
     print(response)
     # state["sql_generator_output"] = response
